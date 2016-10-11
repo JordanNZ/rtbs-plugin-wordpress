@@ -1,0 +1,50 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "4871890f562af083d889621b46018a0a",
+    "content-hash": "cb369eb80084a44910cda073e4c101df",
+    "packages": [
+        {
+            "name": "whytewaters/api-helper-library",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whytewaters/api-helper-library",
+                "reference": "03cf2414e66fcc2ef2765299ce4fa100a7aa7988"
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Rtbs\\ApiHelper\\": "src/"
+                }
+            },
+            "authors": [
+                {
+                    "name": "Whytewaters Ltd",
+                    "homepage": "http://whytewaters.com",
+                    "role": "Vendor"
+                }
+            ],
+            "description": "Api Helper Library for working with Whytewaters Real Time Booking System",
+            "support": {
+                "issues": "https://github.com/whytewaters/api-helper-library/issues",
+                "source": "https://github.com/whytewaters/api-helper-library"
+            },
+            "time": "2016-09-28 02:17:54"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

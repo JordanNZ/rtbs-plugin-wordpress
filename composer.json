@@ -1,0 +1,11 @@
+{
+    "repositories": {
+        "whytewaters-api-client-helper": {
+            "type": "git",
+            "url": "https://github.com/whytewaters/api-helper-library"
+        }
+    },
+    "require": {
+        "whytewaters/api-helper-library": "^1.0"
+    }
+}
