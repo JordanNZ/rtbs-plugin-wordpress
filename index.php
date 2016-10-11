@@ -459,7 +459,7 @@ function mainplugin_fn($atts) {
         date_default_timezone_set('Pacific/Auckland');
         ?>
         <?php if ($_POST['hd_step'] == 2 || $_POST['hd_step'] == 3 || $_POST['hd_step'] == 4) { ?>
-            <h3 class="tour_name"><?php echo $_POST['hd_tour_name']; ?></h3>
+            <h3 class="tour_name"><?php echo htmlentities($_POST['hd_tour_name']); ?></h3>
             <h4>Selected Date & Time: <span
                     style="color:#000;"><?php echo date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></span>
             </h4>
@@ -947,16 +947,14 @@ function mainplugin_fn($atts) {
                                     <div class="hidden_hd">
                                         <input type="hidden" name="hd_step" value="3">
                                         <input type="hidden" name="hd_remaining"
-                                               value="<?php echo $_POST['hd_remaining']; ?>"/>
+                                               value="<?php echo htmlentities($_POST['hd_remaining']); ?>"/>
                                         <input type="hidden" name="hd_tour_key"
-                                               value="<?php echo $_POST['hd_tour_key']; ?>">
-                                        <input type="hidden" name="hd_date" value="<?php echo $_POST['hd_date']; ?>">
+                                               value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
+                                        <input type="hidden" name="hd_date" value="<?php echo htmlentities($_POST['hd_date']); ?>">
                                         <input type="hidden" name="hd_tour_name"
-                                               value="<?php echo $_POST['hd_tour_name']; ?>">
+                                               value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
                                         <input type="hidden" name="hd_tour_date_time"
-                                               value="<?php echo $_POST['hd_tour_date_time']; ?>">
-                                        <input type="hidden" name="return_url"
-                                               value="http://www.flatdesignstudio.com/work/wp-plugin">
+                                               value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
                                     </div>
 
 
@@ -1161,17 +1159,15 @@ function mainplugin_fn($atts) {
                                         <div class="hidden_hd">
                                             <input type="hidden" name="hd_step" value="3">
                                             <input type="hidden" name="hd_remaining"
-                                                   value="<?php echo $_POST['hd_remaining']; ?>"/>
+                                                   value="<?php echo htmlentities($_POST['hd_remaining']); ?>"/>
                                             <input type="hidden" name="hd_tour_key"
-                                                   value="<?php echo $_POST['hd_tour_key']; ?>">
+                                                   value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
                                             <input type="hidden" name="hd_date"
-                                                   value="<?php echo $_POST['hd_date']; ?>">
+                                                   value="<?php echo htmlentities($_POST['hd_date']); ?>">
                                             <input type="hidden" name="hd_tour_name"
-                                                   value="<?php echo $_POST['hd_tour_name']; ?>">
+                                                   value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
                                             <input type="hidden" name="hd_tour_date_time"
-                                                   value="<?php echo $_POST['hd_tour_date_time']; ?>">
-                                            <input type="hidden" name="return_url"
-                                                   value="http://www.flatdesignstudio.com/work/wp-plugin">
+                                                   value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
                                         </div>
 
 
@@ -1299,8 +1295,8 @@ function mainplugin_fn($atts) {
                                     Email
                                 </td>
                                 <td>
-                                    <?php echo $_POST['email']; ?>
-                                    <input type="hidden" name="email" value="<?php echo $_POST['email']; ?>">
+                                    <?php echo htmlentities($_POST['email']); ?>
+                                    <input type="hidden" name="email" value="<?php echo htmlentities($_POST['email']); ?>">
                                 </td>
                             </tr>
 
@@ -1309,8 +1305,8 @@ function mainplugin_fn($atts) {
                                     Phone
                                 </td>
                                 <td>
-                                    <?php echo $_POST['phone']; ?>
-                                    <input type="hidden" name="phone" value="<?php echo $_POST['phone']; ?>">
+                                    <?php echo htmlentities($_POST['phone']); ?>
+                                    <input type="hidden" name="phone" value="<?php echo htmlentities($_POST['phone']); ?>">
                                 </td>
                             </tr>
 
@@ -1336,17 +1332,14 @@ function mainplugin_fn($atts) {
 
                         <div class="hidden_hd">
                             <input type="hidden" name="hd_step" value="4">
-                            <input type="hidden" name="hd_tour_key" value="<?php echo $_POST['hd_tour_key']; ?>">
-                            <input type="hidden" name="hd_date" value="<?php echo $_POST['hd_date']; ?>">
-                            <input type="hidden" name="hd_tour_name" value="<?php echo $_POST['hd_tour_name']; ?>">
-                            <input type="hidden" name="hd_tour_date_time"
-                                   value="<?php echo $_POST['hd_tour_date_time']; ?>">
-                            <input type="hidden" name="return_url"
-                                   value="http://www.flatdesignstudio.com/work/wp-plugin">
+                            <input type="hidden" name="hd_tour_key" value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
+                            <input type="hidden" name="hd_date" value="<?php echo htmlentities($_POST['hd_date']); ?>">
+                            <input type="hidden" name="hd_tour_name" value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
+                            <input type="hidden" name="hd_tour_date_time" value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
                         </div>
 
                         <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
-                                name="confirm_payment">Confirm & Make Payment
+                                name="confirm_payment">Confirm &amp; Make Payment
                         </button>
 
                     </form>
@@ -1392,12 +1385,13 @@ function mainplugin_fn($atts) {
 
     <?php
 } // end ############################ main part #########################
+
+
 function confirm_page_ticket() {
     global $wpdb;
     $getRowval = $wpdb->get_row("SELECT * FROM rtbs_settings");
-    $ret = "/api/ticket?token=";
-    $return_urll = $getRowval->rtbs_domain . $ret . $_REQUEST['token'];
-    return '<p><iframe src="' . $return_urll . '" frameborder="0" style="overflow:hidden;height:1000px;width:100%" height="100%" width="100%"></iframe></p>';
+    $ticket_url = $getRowval->rtbs_domain . "/api/ticket?token=" . $_REQUEST['token'];
+    return '<p><iframe src="' . $ticket_url . '" frameborder="0" style="overflow:hidden;height:1000px;width:100%" height="100%" width="100%"></iframe></p>';
 }
 
 add_shortcode('rtbs_plugin', 'mainplugin_fn'); // Shortcode for main plugin.
