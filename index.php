@@ -906,7 +906,7 @@ function mainplugin_fn($atts) {
                                     <div class="form-group">
                                         <label for="inputEmail" class="col-lg-3">Phone</label>
                                         <div class="col-lg-9">
-                                            <input class="form-control" type="number" name="phone" value="">
+                                            <input class="form-control" type="tel" name="phone" value="">
 
                                         </div>
                                     </div>
