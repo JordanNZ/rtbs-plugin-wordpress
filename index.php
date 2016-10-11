@@ -10,6 +10,12 @@ Version: 1.0
 global $jal_db_version;
 $jal_db_version = '1.0';
 
+const STEP_AVAILABILITY = 1;
+const STEP_DETAILS = 2;
+const STEP_CONFIRM = 3;
+const STEP_PAYMENT = 4;
+
+
 function jal_install() {
     global $wpdb;
     global $jal_db_version;
@@ -81,7 +87,10 @@ function RTBS_booking() {
 // admin settings---------------------------------------
 function adminSettings() {
     global $wpdb;
+    $checkUpdate = null;
+
     $getRowval = $wpdb->get_row("SELECT * FROM rtbs_settings");
+
     if (isset($_POST['save_set'])) {
         // Update the values---
         if (isset($_POST['promo_code'])) {
@@ -99,28 +108,24 @@ function adminSettings() {
         $checkUpdate = $wpdb->update(
             'rtbs_settings',
             array(
-                'api_key' => stripcslashes($_POST['api_key']),
-                'password' => stripcslashes($_POST['password']),
-                'supplier_key' => stripcslashes($_POST['supplier_key']),
-                'rtbs_domain' => stripcslashes($_POST['rtbs_domain']),
-                'promo_code' => stripcslashes($promo_code),
-                'success_url' => stripcslashes($_POST['success_url']),
-                'tour_keys' => stripcslashes($_POST['tour_keys']),
-                'page_title' => stripcslashes($_POST['page_title']),
-                'section_title' => stripcslashes($_POST['section_title']),
-                'title_first_page' => stripcslashes($_POST['title_first_page']),
-                'content_first_page' => stripcslashes($_POST['content_first_page']),
-                'terms_cond' => stripcslashes($_POST['t_c']),
-                'remaining' => stripcslashes($remaining)
+                'api_key' => $_POST['api_key'],
+                'supplier_key' => $_POST['supplier_key'],
+                'rtbs_domain' => $_POST['rtbs_domain'],
+                'promo_code' => $promo_code,
+                'success_url' => $_POST['success_url'],
+                'page_title' => $_POST['page_title'],
+                'section_title' => $_POST['section_title'],
+                'title_first_page' => $_POST['title_first_page'],
+                'content_first_page' => $_POST['content_first_page'],
+                'terms_cond' => $_POST['t_c'],
+                'remaining' => $remaining
             ),
             array('id' => 1),
             array(
                 '%s',
                 '%s',
                 '%s',
-                '%s',
                 '%d',
-                '%s',
                 '%s',
                 '%s',
                 '%s',
@@ -334,7 +339,7 @@ function css_style_rtbs_booking() {
                     <th scope="row"><label for="blogname">CSS Style</label></th>
                     <td>
                         <textarea name="css_style" rows="30" cols="50" id="blogname"
-                                  class="large-text code"><?php echo($getRowval->css_style <> '' ? $getRowval->css_style : ''); ?></textarea>
+                                  class="large-text code"><?php echo(!empty($getRowval->css_style) ? $getRowval->css_style : ''); ?></textarea>
                         <p class="description">Write your CSS Styles for overwrite the default style. (Optional).</p>
                     </td>
                 </tr>
@@ -350,7 +355,22 @@ function css_style_rtbs_booking() {
 
     <?php
 } //############end admin ######################//
+
 function mainplugin_fn($atts) {
+    global $wpdb;
+
+    date_default_timezone_set('Pacific/Auckland');
+
+    // shortcode with attribute or parameter
+    if (isset($atts['tour_key'])) {
+        $exp_key = $atts['tour_key'];
+        $attribute = explode(",", $exp_key);
+    }
+
+    $getRowval = $wpdb->get_row("SELECT * FROM rtbs_settings");
+
+    $hdStep = (isset($_POST['hd_step'])) ? $_POST['hd_step'] : STEP_AVAILABILITY;
+
     ?>
     <link rel="stylesheet" href="https://bootswatch.com/cerulean/bootstrap.css" media="screen" title="no title">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.css"
@@ -392,18 +412,6 @@ function mainplugin_fn($atts) {
         }
     </script>
 
-    <?php
-// shortcode with attribute or parameter
-    if (isset($atts['tour_key'])) {
-        $exp_key = $atts['tour_key'];
-        $attribute = explode(",", $exp_key);
-    }
-
-
-    global $wpdb;
-    $getRowval = $wpdb->get_row("SELECT * FROM rtbs_settings");
-    ?>
-
     <!-- CSS Styles Custom --->
     <style>
         <?php echo $getRowval->css_style; ?>
@@ -420,34 +428,34 @@ function mainplugin_fn($atts) {
 
 
                 <div
-                    class="col-md-3 col-sm-3 col-xs-3 <?php echo ($_POST['hd_step'] != '2' && $_POST['hd_step'] != '3' && $_POST['hd_step'] != '4') ? 'selected' : '' ?>">
+                    class="col-md-3 col-sm-3 col-xs-3 <?php echo ($hdStep == STEP_AVAILABILITY) ? 'selected' : '' ?>">
                     <div style="margin-top: 15px;" class="col-md-2 numberCircle">1</div>
                     <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
-                        <p class="text-primary"><?php echo($exppageTtle[0] <> '' ? $exppageTtle[0] : 'AVAILABILITY'); ?></p>
+                        <p class="text-primary"><?php echo(!empty($exppageTtle[0]) ? $exppageTtle[0] : 'AVAILABILITY'); ?></p>
 
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($_POST['hd_step'] == '2' ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == STEP_DETAILS ? 'selected' : ''); ?>">
                     <div style="margin-top: 15px;" class="col-md-2 numberCircle">2</div>
                     <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
-                        <p class="text-primary"><?php echo($exppageTtle[1] <> '' ? $exppageTtle[1] : 'DETAILS'); ?></p>
+                        <p class="text-primary"><?php echo (!empty($exppageTtle[1]) ? $exppageTtle[1] : 'DETAILS'); ?></p>
 
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($_POST['hd_step'] == '3' ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == STEP_CONFIRM ? 'selected' : ''); ?>">
                     <div style="margin-top: 15px;" class="col-md-2 numberCircle">3</div>
                     <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
-                        <p class="text-primary"><?php echo($exppageTtle[2] <> '' ? $exppageTtle[2] : 'CONFIRM'); ?></p>
+                        <p class="text-primary"><?php echo (!empty($exppageTtle[2]) ? $exppageTtle[2] : 'CONFIRM'); ?></p>
 
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($_POST['hd_step'] == '4' ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == STEP_PAYMENT ? 'selected' : ''); ?>">
                     <div style="margin-top: 15px;" class="col-md-2 numberCircle">4</div>
                     <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
-                        <p class="text-primary"><?php echo($exppageTtle[3] <> '' ? $exppageTtle[3] : 'PAYMENT'); ?></p>
+                        <p class="text-primary"><?php echo (!empty($exppageTtle[3]) ? $exppageTtle[3] : 'PAYMENT'); ?></p>
 
                     </div>
                 </div>
@@ -455,10 +463,7 @@ function mainplugin_fn($atts) {
 
         </div>
         <p>&nbsp;</p>
-        <?php
-        date_default_timezone_set('Pacific/Auckland');
-        ?>
-        <?php if ($_POST['hd_step'] == 2 || $_POST['hd_step'] == 3 || $_POST['hd_step'] == 4) { ?>
+        <?php if (in_array($hdStep, array(STEP_DETAILS, STEP_CONFIRM, STEP_PAYMENT))) { ?>
             <h3 class="tour_name"><?php echo htmlentities($_POST['hd_tour_name']); ?></h3>
             <h4>Selected Date & Time: <span
                     style="color:#000;"><?php echo date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></span>
@@ -488,9 +493,7 @@ function mainplugin_fn($atts) {
         <!--------------------------- Step 4 your details ------------------------------------->
 
         <?php
-        if ($_POST['hd_step'] == '4') {
-
-            date_default_timezone_set('Pacific/Auckland');
+        if ($hdStep == STEP_PAYMENT) {
 
             require_once("vendor/autoload.php");
 
@@ -521,7 +524,7 @@ function mainplugin_fn($atts) {
 
             //echo PHP_EOL,"Tours for $supplier_name...";
             //echo count($attribute);
-            if ($attribute[0] <> '') {
+            if (!empty($attribute[0])) {
                 $tour_keys = array();
                 foreach ($attribute as $tour) {
                     $tour_keys[] = $tour;
@@ -591,12 +594,16 @@ function mainplugin_fn($atts) {
             $booking->set_last_name($_POST['lname']);
             $booking->set_email($_POST['email']);
             $booking->set_phone($_POST['phone']);
-            $booking->set_promo_key($_POST['promo']);
-            if ($getRowval->success_url <> '') {
+
+            if (!empty($_POST['promo'])) {
+                $booking->set_promo_key($_POST['promo']);
+            }
+            
+            if (!empty($getRowval->success_url)) {
                 $booking->set_return_url($getRowval->success_url);
             }
 
-            if ($_POST['pickup_key'] != '') {
+            if (!empty($_POST['pickup_key'])) {
                 $booking->set_pickup_key($_POST['pickup_key']);
             }
 
@@ -631,18 +638,9 @@ function mainplugin_fn($atts) {
         ?>
 
 
-        <div class="row rtbs-tours-step-<?php if ($_POST['hd_step'] == '2') {
-            echo '2';
-        } elseif ($_POST['hd_step'] == '3') {
-            echo '3';
-        } elseif ($_POST['hd_step'] == '4') {
-            echo '4';
-        } else {
-            echo '1';
-        } ?>">
+        <div class="row rtbs-tours-step-<?php echo $hdStep; ?>">
             <?php
-            if ($getRowval->rtbs_domain <> '') {
-                date_default_timezone_set('Pacific/Auckland');
+            if (!empty($getRowval->rtbs_domain)) {
 
                 require_once("vendor/autoload.php");
 
@@ -670,11 +668,11 @@ function mainplugin_fn($atts) {
                 }
 
 
-                if ($_POST['hd_step'] != '3' && $_POST['hd_step'] != '4' && $_POST['hd_step'] != '2') {
+                if ($hdStep == STEP_AVAILABILITY) {
 
 //echo PHP_EOL,"Tours for $supplier_name...";
 //echo count($attribute);
-                    if ($attribute[0] <> '') {
+                    if (!empty($attribute[0])) {
                         $tour_keys = array();
                         foreach ($attribute as $tour) {
                             $tour_keys[] = $tour;
@@ -796,7 +794,7 @@ function mainplugin_fn($atts) {
             <?php } ?>
             <!---------------------------End Step 1 ------------------------------------->
 
-            <?php if ($_POST['hd_step'] == '2') { ?>
+            <?php if ($hdStep == STEP_DETAILS) { ?>
                 <!--------------------------- Step 2 your details ------------------------------------->
 
 
@@ -824,7 +822,7 @@ function mainplugin_fn($atts) {
                             <form onSubmit="return validd()" class="form-horizontal" action="" method="post">
                                 <fieldset>
                                     <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                       class=""><?php echo($expsectionTitle[0] <> '' ? $expsectionTitle[0] : 'Number of People'); ?> </p>
+                                       class=""><?php echo(!empty($expsectionTitle[0]) ? $expsectionTitle[0] : 'Number of People'); ?> </p>
                                     <?php
                                     $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
 
@@ -876,21 +874,21 @@ function mainplugin_fn($atts) {
 
 
                                     <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                       class=""><?php echo($expsectionTitle[1] <> '' ? $expsectionTitle[1] : 'Your Details'); ?> </p>
+                                       class=""><?php echo(!empty($expsectionTitle[1]) ? $expsectionTitle[1] : 'Your Details'); ?> </p>
 
 
                                     <div class="form-group">
-                                        <label for="inputEmail" class="col-lg-3">First Name</label>
+                                        <label for="rtbsFname" class="col-lg-3">First Name</label>
                                         <div class="col-lg-9">
-                                            <input class="form-control" type="text" name="fname" value="">
+                                            <input id="rtbsFname" class="form-control" type="text" name="fname" value="">
 
                                         </div>
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="inputEmail" class="col-lg-3">Last Name</label>
+                                        <label for="rtbsLname" class="col-lg-3">Last Name</label>
                                         <div class="col-lg-9">
-                                            <input class="form-control" type="text" name="lname" value="">
+                                            <input id="rtbsLname" class="form-control" type="text" name="lname" value="">
 
                                         </div>
                                     </div>
@@ -904,9 +902,9 @@ function mainplugin_fn($atts) {
                                     </div>
 
                                     <div class="form-group">
-                                        <label for="inputEmail" class="col-lg-3">Phone</label>
+                                        <label for="rtbsPhone" class="col-lg-3">Phone</label>
                                         <div class="col-lg-9">
-                                            <input class="form-control" type="tel" name="phone" value="">
+                                            <input id="rtbsPhone" class="form-control" type="tel" name="phone" value="">
 
                                         </div>
                                     </div>
@@ -916,9 +914,9 @@ function mainplugin_fn($atts) {
                                     if ($getRowval->promo_code == '0') {
                                         ?>
                                         <div class="form-group">
-                                            <label for="inputEmail" class="col-lg-3">Promo Code</label>
+                                            <label for="rtbsPromo" class="col-lg-3">Promo Code</label>
                                             <div class="col-lg-9">
-                                                <input class="form-control" type="text" name="promo" value="">
+                                                <input id="rtbsPromo" class="form-control" type="text" name="promo" value="">
 
                                             </div>
                                         </div>
@@ -983,7 +981,7 @@ function mainplugin_fn($atts) {
 
             <!-------------------------- step 3 Booking ------------------------------------->
             <?php
-            if ($_POST['hd_step'] == '3') {
+            if ($hdStep == STEP_CONFIRM) {
                 $userSumRemain = array_sum($_POST['pr_ice']);
                 if (array_sum($_POST['pr_ice']) == 0) {
                     echo '<p class="rtbs_error_msg">Please select at least one unit.</p>';
@@ -996,9 +994,8 @@ function mainplugin_fn($atts) {
                 }
                 if ($_POST['email'] == '') {
                     echo '<p class="rtbs_error_msg">Email is required.</p>';
-                }
-                if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-                    $emailErr = "Invalid email format.";
+                } elseif (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) === false) {
+                    echo '<p class="rtbs_error_msg">Email is not valid.</p>';
                 }
                 if ($_POST['phone'] == '') {
                     echo '<p class="rtbs_error_msg">Phone is required.</p>';
@@ -1033,9 +1030,10 @@ function mainplugin_fn($atts) {
                                 <form onSubmit="return validd()" class="form-horizontal" action="" method="post">
                                     <fieldset>
                                         <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                           class=""><?php echo($expsectionTitle[0] <> '' ? $expsectionTitle[0] : 'Number of People'); ?> </p>
+                                           class=""><?php echo(!empty($expsectionTitle[0]) ? $expsectionTitle[0] : 'Number of People'); ?> </p>
                                         <?php
                                         $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+                                        $price_for_step2 = [];
 
                                         foreach ($tours[0]->get_prices() as $price) {
                                             $price_for_step2[] = $price;
@@ -1083,14 +1081,14 @@ function mainplugin_fn($atts) {
 
 
                                         <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                           class=""><?php echo($expsectionTitle[1] <> '' ? $expsectionTitle[1] : 'Your Details'); ?> </p>
+                                           class=""><?php echo(!empty($expsectionTitle[1]) ? $expsectionTitle[1] : 'Your Details'); ?> </p>
 
 
                                         <div class="form-group">
                                             <label for="inputEmail" class="col-lg-3">First Name</label>
                                             <div class="col-lg-9">
                                                 <input class="form-control" type="text" name="fname"
-                                                       value="<?php echo(isset($_POST['fname']) ? preg_replace('/\\\\/', '', $_POST['fname']) : ''); ?>">
+                                                       value="<?php echo htmlentities(isset($_POST['fname']) ? $_POST['fname'] : ''); ?>">
 
                                             </div>
                                         </div>
@@ -1099,7 +1097,7 @@ function mainplugin_fn($atts) {
                                             <label for="inputEmail" class="col-lg-3">Last Name</label>
                                             <div class="col-lg-9">
                                                 <input class="form-control" type="text" name="lname"
-                                                       value="<?php echo(isset($_POST['lname']) ? preg_replace('/\\\\/', '', $_POST['lname']) : ''); ?>">
+                                                       value="<?php echo htmlentities(isset($_POST['lname']) ? $_POST['lname'] : ''); ?>">
 
                                             </div>
                                         </div>
@@ -1108,7 +1106,7 @@ function mainplugin_fn($atts) {
                                             <label for="inputEmail" class="col-lg-3">Email</label>
                                             <div class="col-lg-9">
                                                 <input class="form-control" type="email" name="email"
-                                                       value="<?php echo(isset($_POST['email']) ? $_POST['email'] : ''); ?>">
+                                                       value="<?php echo htmlentities(isset($_POST['email']) ? $_POST['email'] : ''); ?>">
 
                                             </div>
                                         </div>
@@ -1116,8 +1114,8 @@ function mainplugin_fn($atts) {
                                         <div class="form-group">
                                             <label for="inputEmail" class="col-lg-3">Phone</label>
                                             <div class="col-lg-9">
-                                                <input class="form-control" type="number" name="phone"
-                                                       value="<?php echo(isset($_POST['phone']) ? $_POST['phone'] : ''); ?>">
+                                                <input class="form-control" type="tel" name="phone"
+                                                       value="<?php echo htmlentities(isset($_POST['phone']) ? $_POST['phone'] : ''); ?>">
 
                                             </div>
                                         </div>
@@ -1130,7 +1128,7 @@ function mainplugin_fn($atts) {
                                                 <label for="inputEmail" class="col-lg-3">Promo Code</label>
                                                 <div class="col-lg-9">
                                                     <input class="form-control" type="text" name="promo"
-                                                           value="<?php echo(isset($_POST['promo']) ? $_POST['promo'] : ''); ?>">
+                                                           value="<?php echo htmlentities(isset($_POST['promo']) ? $_POST['promo'] : ''); ?>">
 
                                                 </div>
                                             </div>
@@ -1236,6 +1234,7 @@ function mainplugin_fn($atts) {
                             </tr>
                             <?php
                             $i = 0;
+                            $t = 0;
                             foreach ($pricnamee as $ss) {
                                 ?>
                                 <tr>
