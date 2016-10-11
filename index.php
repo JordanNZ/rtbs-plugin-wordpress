@@ -1,11 +1,8 @@
 <?php
 /*
 Plugin Name: RTBS Booking Plugin
-XPlugin URI: http://example.com
 Description: Tour Booking Plugin
 Version: 1.0
-XAuthor: Sumanta Kundu
-XAuthor URI: http://flatdesignstudio.com
 */
 
 //############################ Create table automaticaly #############################//
