@@ -22,14 +22,14 @@ class rtbs_plugin {
     public function __construct($wpdb) {
         $this->wpdb = $wpdb;
 
-        register_activation_hook(__FILE__, [$this, 'plugin_activate']);
-        register_activation_hook(__FILE__, [$this, 'plugin_activate_init']);
-        register_deactivation_hook(__FILE__, [$this, 'plugin_deactivate']);
+        register_activation_hook(__FILE__, array($this, 'plugin_activate'));
+        register_activation_hook(__FILE__, array($this, 'plugin_activate_init'));
+        register_deactivation_hook(__FILE__, array($this, 'plugin_deactivate'));
 
-        add_action('admin_menu', [$this, 'build_admin_menu']);
+        add_action('admin_menu', array($this, 'build_admin_menu'));
 
-        add_shortcode('rtbs_plugin', [$this, 'rtbs_plugin_main']);
-        add_shortcode('rtbs_show_ticket', [$this, 'rtbs_show_ticket']);
+        add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
+        add_shortcode('rtbs_show_ticket', array($this, 'rtbs_show_ticket'));
 
     }
 
@@ -63,7 +63,7 @@ class rtbs_plugin {
     }
 
     public function plugin_activate_init() {
-        $this->wpdb->insert('rtbs_settings', ['id' => 1]);
+        $this->wpdb->insert('rtbs_settings', array('id' => 1));
     }
 
 
@@ -74,9 +74,9 @@ class rtbs_plugin {
 
     public function build_admin_menu() {
         add_menu_page('RTBS', 'RTBS', '', __FILE__, 'moveing_company', plugins_url('img/settings.png', __FILE__));
-        add_submenu_page(__FILE__, 'Shortcode', 'Shortcode', 'administrator', 'shortcode-rtbs-booking', [$this, 'rtbs_admin_shortcode']);
-        add_submenu_page(__FILE__, 'CSS Style', 'CSS Style', 'administrator', 'css-style-rtbs-booking', [$this, 'rtbs_admin_css_style']);
-        add_submenu_page(__FILE__, 'Settings', 'Settings', 'administrator', 'adminSettings', [$this, 'rtbs_admin_settings']);
+        add_submenu_page(__FILE__, 'Shortcode', 'Shortcode', 'administrator', 'shortcode-rtbs-booking', array($this, 'rtbs_admin_shortcode'));
+        add_submenu_page(__FILE__, 'CSS Style', 'CSS Style', 'administrator', 'css-style-rtbs-booking', array($this, 'rtbs_admin_css_style'));
+        add_submenu_page(__FILE__, 'Settings', 'Settings', 'administrator', 'adminSettings', array($this, 'rtbs_admin_settings'));
     }
 
     private function select_settings() {
@@ -413,7 +413,7 @@ class rtbs_plugin {
                             break;
 
                         case self::STEP_CONFIRM:
-                            $this->step_confirm($settings, $booking_service);
+                            $this->step_confirm($settings);
                             break;
 
                         case self::STEP_AVAILABILITY:
@@ -512,17 +512,14 @@ class rtbs_plugin {
 
     /**
      * @param stdClass $settings
-     * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      */
-    private function step_confirm($settings, $booking_service) {
-
-        $section_titles = explode(",", $settings->section_title);
+    private function step_confirm($settings) {
 
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
 
         $total = 0;
-        $price_qtys = [];
+        $price_qtys = array();
 
         foreach ($_POST['price_qty'] as $idx => $qty) {
             if ($qty > 0) {
@@ -653,9 +650,8 @@ class rtbs_plugin {
     /**
      * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
-     * @param array $errors
      */
-    private function step_details($settings, $booking_service, $errors = []) {
+    private function step_details($settings, $booking_service) {
 
         $section_titles = explode(",", $settings->section_title);
         $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
@@ -677,7 +673,7 @@ class rtbs_plugin {
                             <?php foreach ($prices as $price): ?>
 
                                 <div class="form-group">
-                                    <label for="select" class="col-md-6"><div class="text-left"><?= $price->get_name(); ?></div></label>
+                                    <label for="select" class="col-md-6 text-left"><?= $price->get_name(); ?></label>
                                     <div class="col-md-6">
                                         <div class="col-md-6">
                                             <input type="hidden" name="price_rate[<?= $price->get_price_key(); ?>]" value="<?= $price->get_rate(); ?>">
@@ -794,6 +790,8 @@ class rtbs_plugin {
     /**
      * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
+     * @param array $shortcode_tour_keys
+     * @param string $date
      */
     private function step_availability($settings, $booking_service, $shortcode_tour_keys, $date) {
 
@@ -802,7 +800,7 @@ class rtbs_plugin {
         if ($shortcode_tour_keys) {
             $tour_keys = $shortcode_tour_keys;
         } else {
-            $tour_keys = [];
+            $tour_keys = array();
             foreach ($supplier->get_tours() as $tour) {
                 $tour_keys[] = $tour->get_tour_key();
             }
@@ -819,7 +817,7 @@ class rtbs_plugin {
         /** @var \Rtbs\ApiHelper\Models\Session[] $sessions */
         $sessions = $sessions_and_advanced_dates['sessions'];
 
-        $sessions_by_tour = [];
+        $sessions_by_tour = array();
 
         foreach ($sessions as $session) {
             $sessions_by_tour[$session->get_tour_key()][] = $session;
