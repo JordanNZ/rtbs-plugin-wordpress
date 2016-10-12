@@ -23,7 +23,7 @@ class rtbs_plugin {
         $this->wpdb = $wpdb;
 
         register_activation_hook(__FILE__, [$this, 'plugin_activate']);
-        register_activation_hook(__FILE__, [$this, 'plugin_init']);
+        register_activation_hook(__FILE__, [$this, 'plugin_activate_init']);
         register_deactivation_hook(__FILE__, [$this, 'plugin_deactivate']);
 
         add_action('admin_menu', [$this, 'build_admin_menu']);
@@ -62,7 +62,7 @@ class rtbs_plugin {
         add_option('jal_db_version', $this->jal_db_version);
     }
 
-    public function plugin_init() {
+    public function plugin_activate_init() {
         $this->wpdb->insert('rtbs_settings', ['id' => 1]);
     }
 
@@ -312,12 +312,16 @@ class rtbs_plugin {
         }
 
         $settings = $this->select_settings();
-        $hdStep = (isset($_POST['hd_step'])) ? $_POST['hd_step'] : self::STEP_AVAILABILITY;
 
         if (empty($settings->rtbs_domain)) {
             die('Error: RTBS Domain Not Set');
         }
 
+        if (empty($settings->supplier_key)) {
+            die('Error: Supplier Key Not Set');
+        }
+
+        $hdStep = (isset($_POST['hd_step'])) ? $_POST['hd_step'] : self::STEP_AVAILABILITY;
         $date = (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d', strtotime("+1 day"));
 
         $credentials = array(
@@ -414,7 +418,7 @@ class rtbs_plugin {
 
                         case self::STEP_AVAILABILITY:
                         default:
-                            $this->step_availability($settings, $booking_service, $shortcode_tour_keys);
+                            $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
                             break;
                     }
 
@@ -513,35 +517,21 @@ class rtbs_plugin {
     private function step_confirm($settings, $booking_service) {
 
         $section_titles = explode(",", $settings->section_title);
-        $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
 
-        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
-        $price_for_step2 = [];
+        $price_rates = $_POST['price_rate'];
+        $price_names = $_POST['hd_price_name'];
 
-        foreach ($tours[0]->get_prices() as $price) {
-            $price_for_step2[] = $price;
-        }
+        $total = 0;
+        $price_qtys = [];
 
-        $index = 0;
-        $k = array();
-        foreach ($_POST['prices'] as $key => $value) {
-            if ($value != '0') {
-                $m = array_push($k, $index);
+        foreach ($_POST['price_qty'] as $idx => $qty) {
+            if ($qty > 0) {
+                $price_qtys[$idx] = $qty;
+
+                $total += ($qty * $price_rates[$idx]);
             }
-            $index++;
         }
 
-        foreach ($k as $m) {
-            $pricnamee[] = $_POST['hd_price_name'][$m];
-        }
-
-        foreach ($k as $r) {
-            $rr[] = $_POST['hd_price_rate'][$r];
-        }
-
-        foreach ($k as $q) {
-            $qq[] = $_POST['prices'][$q];
-        }
         ?>
 
             <form action="" method="post">
@@ -549,61 +539,33 @@ class rtbs_plugin {
                 <table class="table">
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                Confirm
-                                Your Booking </p>
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Confirm Your Booking </p>
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            Tour Date Time
-                        </td>
-                        <td>
-                            <?= date('l dS F Y h:i A', strtotime($_POST['hd_tour_date_time'])); ?>
-                        </td>
+                        <td>Tour Date Time</td>
+                        <td><?= date('l dS F Y h:i A', strtotime($_POST['hd_tour_date_time'])); ?></td>
                     </tr>
-                    <?php
-                    $i = 0;
-                    $t = 0;
-                    foreach ($pricnamee as $ss) {
-                        ?>
+
+                    <?php foreach ($price_qtys as $idx => $qty): ?>
                         <tr>
-                            <td>
-
-                                <?= '<p>' . $ss . ' x ' . $qq[$i] . '</p>'; ?>
-
-                            </td>
-                            <td>
-                                <?= '$' . $rr[$i] * $qq[$i]; ?>
-                            </td>
+                            <td><?= htmlentities($price_names[$idx] . ' x ' . $qty); ?></td>
+                            <td><?= '$' . number_format($price_rates[$idx] * $qty, 2); ?></td>
                         </tr>
-                        <?php
-                        $t += $rr[$i] * $qq[$i];
-                        $i++;
-                    }
-                    ?>
-
-                    <?php
-                    foreach ($_POST['prices'] as $value_price) {
-                        echo '<input type="hidden" name="prices[]" value="' . $value_price . '">';
-                    }
-                    ?>
-
+                    <?php endforeach; ?>
 
                     <tr>
                         <td>
                             Total Price:
                         </td>
                         <td>
-                            <?= '$' . $t; ?>
+                            <?= '$' . number_format($total, 2); ?>
                         </td>
                     </tr>
 
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                Your
-                                Details </p>
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Your Details</p>
                         </td>
                     </tr>
 
@@ -612,11 +574,9 @@ class rtbs_plugin {
                             Name
                         </td>
                         <td>
-                            <?= preg_replace('/\\\\/', '', $_POST['fname']) . ' ' . preg_replace('/\\\\/', '', $_POST['lname']); ?>
-                            <input type="hidden" name="fname"
-                                   value="<?= preg_replace('/\\\\/', '', $_POST['fname']); ?>">
-                            <input type="hidden" name="lname"
-                                   value="<?= preg_replace('/\\\\/', '', $_POST['lname']); ?>">
+                            <?= htmlentities($_POST['fname']) . ' ' . htmlentities($_POST['lname']); ?>
+                            <input type="hidden" name="fname" value="<?= htmlentities($_POST['fname']); ?>">
+                            <input type="hidden" name="lname" value="<?= htmlentities($_POST['lname']); ?>">
                         </td>
                     </tr>
 
@@ -642,9 +602,7 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                Terms &
-                                Conditions </p>
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Terms &amp; Conditions </p>
                         </td>
                     </tr>
 
@@ -664,6 +622,9 @@ class rtbs_plugin {
                     <input type="hidden" name="hd_date" value="<?= htmlentities($_POST['hd_date']); ?>">
                     <input type="hidden" name="hd_tour_name" value="<?= htmlentities($_POST['hd_tour_name']); ?>">
                     <input type="hidden" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
+                    <?php foreach ($price_qtys as $idx => $qty): ?>
+                        <input type="hidden" name="price_qty[<?= $idx; ?>]" value="<?= $qty; ?>">
+                    <?php endforeach; ?>
                 </div>
 
                 <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
@@ -686,43 +647,6 @@ class rtbs_plugin {
             </script>
 
         <?php
-    }
-
-
-    private function validate_details() {
-        $errors = [];
-
-        if ($_POST) {
-            $total_pax = 0;
-
-            foreach($_POST['prices'] as $price_key => $pax) {
-                $total_pax += $pax;
-            }
-
-            if ($total_pax == 0) {
-                $errors[] ='Please select at least one unit.';
-            }
-
-            if (empty($_POST['fname'])) {
-                $errors[] = 'First Name is required.';
-            }
-
-            if (empty($_POST['lname'])) {
-                $errors[] = 'Last Name is required.';
-            }
-
-            if (empty($_POST['email'])) {
-                $errors[] = 'Email is required.';
-            } elseif (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) === false) {
-                $errors[] = 'Email is not valid.';
-            }
-
-            if (empty($_POST['phone'])) {
-                $errors[] = 'Phone is required.';
-            }
-        }
-
-        return $errors;
     }
 
 
@@ -756,8 +680,8 @@ class rtbs_plugin {
                                     <label for="select" class="col-md-6"><div class="text-left"><?= $price->get_name(); ?></div></label>
                                     <div class="col-md-6">
                                         <div class="col-md-6">
-                                            <input type="hidden" name="rate[<?= $price->get_price_key(); ?>]" class="rate" value="<?= $price->get_rate(); ?>">
-                                            <select class="form-control nPeople" name="price[<?= $price->get_price_key(); ?>]" id="<?= $price->get_price_key(); ?>" data-rate="<?= $price->get_rate(); ?>" data-pax="<?= $price->get_passenger_count(); ?>">
+                                            <input type="hidden" name="price_rate[<?= $price->get_price_key(); ?>]" value="<?= $price->get_rate(); ?>">
+                                            <select class="form-control nPeople" name="price_qty[<?= $price->get_price_key(); ?>]" data-rate="<?= $price->get_rate(); ?>" data-pax="<?= $price->get_passenger_count(); ?>">
                                                 <?php foreach ($qty_range as $qty): ?>
                                                     <option value="<?= $qty; ?>"><?= $qty; ?></option>
                                                 <?php endforeach; ?>
@@ -768,8 +692,7 @@ class rtbs_plugin {
                                             <div class="text-right"><?= '$' . $price->get_rate(); ?></div>
                                         </div>
 
-                                        <input type="hidden" name="hd_price_name[]" value="<?= $price->get_name(); ?>">
-                                        <input type="hidden" name="hd_price_rate[]" value="<?= $price->get_rate(); ?>">
+                                        <input type="hidden" name="hd_price_name[<?= $price->get_price_key(); ?>]" value="<?= $price->get_name(); ?>">
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -872,9 +795,7 @@ class rtbs_plugin {
      * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      */
-    private function step_availability($settings, $booking_service, $shortcode_tour_keys) {
-
-        $date = (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d');
+    private function step_availability($settings, $booking_service, $shortcode_tour_keys, $date) {
 
         $supplier = $booking_service->get_supplier($settings->supplier_key);
 
@@ -944,31 +865,15 @@ class rtbs_plugin {
      */
     private function step_payment($settings, $booking_service) {
 
-        $supplier = $booking_service->get_supplier($settings->supplier_key);
-
-        $tour_keys = array($_POST['hd_tour_key']);
-        $date = $_POST['hd_date'];
-        $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($supplier->get_supplier_key(), $tour_keys, $date);
-
-        /** @var Rtbs\ApiHelper\Models\Session $my_session */
-        $my_session = null;
-
-        /** @var Rtbs\ApiHelper\Models\Session $session */
-        foreach ($sessions_and_advanced_dates['sessions'] as $session) {
-            if ($session->get_datetime() == $_POST['hd_tour_date_time']) {
-                $my_session = $session;
-                break;
-            }
-        }
-
         $booking = new Rtbs\ApiHelper\Models\Booking();
-        $booking->set_tour_key($my_session->get_tour_key());
+        $booking->set_tour_key($_POST['hd_tour_key']);
         $booking->set_datetime($_POST['hd_tour_date_time']);
         $booking->set_first_name($_POST['fname']);
         $booking->set_last_name($_POST['lname']);
         $booking->set_email($_POST['email']);
         $booking->set_phone($_POST['phone']);
 
+        // TODO call promo api
         if (!empty($_POST['promo'])) {
             $booking->set_promo_key($_POST['promo']);
         }
@@ -977,28 +882,23 @@ class rtbs_plugin {
             $booking->set_return_url($settings->success_url);
         }
 
+        // TODO pickup keys dont work yet
         if (!empty($_POST['pickup_key'])) {
             $booking->set_pickup_key($_POST['pickup_key']);
         }
 
-
-        $prices = $my_session->get_prices();
-        $p = 0;
-        foreach ($_POST['prices'] as $qty) {
-            $booking->add_price_selection($prices[$p], $qty);
-            $p++;
+        $price_qtys = $_POST['price_qty'];
+        foreach ($price_qtys as $key => $qty) {
+            $booking->add_price_selection_keys($key, $qty);
         }
 
-        $url_or_booking = $booking_service->make_booking($booking);
+        $return_url = $booking_service->make_booking($booking);
 
-        var_dump($url_or_booking);
-die('here i broke it');
-        $urlReturnPayment = var_export($url_or_booking, true);
-        $ret_URL = substr($urlReturnPayment, 1, -1);
-        if ($urlReturnPayment == '') {
-            echo '<p class="rtbs_error_msg">Error. insufficient capacity or session closed. </p>';
+        if ($return_url == '') {
+            die('<p class="rtbs_error_msg">Error. insufficient capacity or session closed. </p>');
         } else {
-            echo '<script>window.location.href="' . $ret_URL . '"</script>';
+            echo '<script>window.location.href="' . $return_url . '"</script>';
+            exit;
         }
     }
 
