@@ -6,7 +6,7 @@ Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
 Version: 1.0
 */
-
+global $wpdb;
 new rtbs_plugin($wpdb);
 
 class rtbs_plugin {
@@ -22,8 +22,9 @@ class rtbs_plugin {
     public function __construct($wpdb) {
         $this->wpdb = $wpdb;
 
-        register_activation_hook(__FILE__, [$this, 'activation_hook']);
-        register_deactivation_hook(__FILE__, [$this, 'deactivation_hook']);
+        register_activation_hook(__FILE__, [$this, 'plugin_activate']);
+        register_activation_hook(__FILE__, [$this, 'plugin_init']);
+        register_deactivation_hook(__FILE__, [$this, 'plugin_deactivate']);
 
         add_action('admin_menu', [$this, 'build_admin_menu']);
 
@@ -33,7 +34,7 @@ class rtbs_plugin {
     }
 
 
-    public function activation_hook() {
+    public function plugin_activate() {
         $charset_collate = $this->wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE rtbs_settings (
@@ -53,17 +54,20 @@ class rtbs_plugin {
                   `is_show_remaining` int(11) NOT NULL,
                   `css_style` longtext NOT NULL,
                   PRIMARY KEY (`id`)
-                ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET={$charset_collate};";
+                ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET={$charset_collate}";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
 
         add_option('jal_db_version', $this->jal_db_version);
+    }
 
+    public function plugin_init() {
         $this->wpdb->insert('rtbs_settings', ['id' => 1]);
     }
 
-    public function deactivation_hook() {
+
+    public function plugin_deactivate() {
         $this->wpdb->query('DROP TABLE rtbs_settings');
     }
 
@@ -137,86 +141,63 @@ class rtbs_plugin {
                     <tbody>
                     <tr>
                         <th scope="row"><label for="api_key">API Key</label></th>
-                        <td><input name="api_key" type="text" id="api_key" value="<?php echo $settings->api_key; ?>"
-                                   class="regular-text">
+                        <td><input name="api_key" type="text" id="api_key" value="<?= $settings->api_key; ?>" class="regular-text">
                             <p class="description">Your API key.</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="supplier_key">Supplier Key</label></th>
-                        <td><input name="supplier_key" type="text" id="supplier_key"
-                                   aria-describedby="tagline-description" value="<?php echo $settings->supplier_key; ?>"
-                                   class="regular-text">
+                        <td><input name="supplier_key" type="text" id="supplier_key" value="<?= $settings->supplier_key; ?>" class="regular-text">
                             <p class="description">Set your Supplier key.</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="rtbs_domain">RTBS Domain</label></th>
-                        <td><input name="rtbs_domain" type="text" id="rtbs_domain"
-                                   aria-describedby="tagline-description"
-                                   value="<?php echo (isset($settings->rtbs_domain)) ? $settings->rtbs_domain : 'https://rtbslive.com'; ?>"
-                                   class="regular-text">
+                        <td><input name="rtbs_domain" type="text" id="rtbs_domain" value="<?= (!empty($settings->rtbs_domain)) ? $settings->rtbs_domain : 'https://rtbslive.com'; ?>" class="regular-text">
                             <p class="description">Set your RTBS domain.</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="is_show_promocode">Show Promo Code</label></th>
-                        <td><input name="is_show_promocode" type="checkbox" id="is_show_promocode"
-                                   aria-describedby="tagline-description" <?php echo ($settings->is_show_promocode) ? 'checked' : '' ?>
-                                   class="regular-checkbox" value="0">
+                        <td><input name="is_show_promocode" type="checkbox" id="is_show_promocode" <?= ($settings->is_show_promocode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
                             <p class="description">Show/Hide</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="is_show_remaining">Show Remaining</label></th>
-                        <td><input name="is_show_remaining" type="checkbox" id="is_show_remaining"
-                                   aria-describedby="tagline-description"
-                                   class="regular-checkbox" <?php echo ($settings->is_show_remaining) ? 'checked' : '' ?>
-                                   value="0">
+                        <td><input name="is_show_remaining" type="checkbox" id="is_show_remaining" class="regular-checkbox" <?= ($settings->is_show_remaining) ? 'checked' : '' ?>  value="1">
                             <p class="description">Show/Hide</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="success_url">Success URI</label></th>
-                        <td><input name="success_url" type="text" id="success_url"
-                                   aria-describedby="tagline-description" value="<?php echo $settings->success_url; ?>"
-                                   class="regular-text">
-                            <p class="description">Return or Success url ( For display ticket you must put
-                                [rtbs_show_ticket] shortcode to your return url page ).</p>
+                        <td><input name="success_url" type="text" id="success_url" value="<?= $settings->success_url; ?>" class="regular-text">
+                            <p class="description">Return or Success url ( For display ticket you must put [rtbs_show_ticket] shortcode to your return url page ).</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="page_title">Page Title</label></th>
-                        <td><input name="page_title" type="text" id="page_title" aria-describedby="tagline-description"
-                                   value="<?php echo $settings->page_title; ?>" class="regular-text">
-                            <p class="description">Your custom progress bar page title here, Separated by comma (
-                                Default:
-                                AVAILABILITY,DETAILS,CONFIRM,PAYMENT )</p>
+                        <td><input name="page_title" type="text" id="page_title" value="<?= $settings->page_title; ?>" class="regular-text">
+                            <p class="description">Your custom progress bar page title here, Separated by comma (Default: AVAILABILITY,DETAILS,CONFIRM,PAYMENT)</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="section_title">Section Title</label></th>
-                        <td><input name="section_title" type="text" id="section_title"
-                                   aria-describedby="tagline-description"
-                                   value="<?php echo $settings->section_title; ?>"
-                                   class="regular-text">
-                            <p class="description">Your custom progress bar section title here, Separated by comma (
-                                Default: Number of People,Your Details,Pickup ).</p>
+                        <td><input name="section_title" type="text" id="section_title" value="<?= $settings->section_title; ?>" class="regular-text">
+                            <p class="description">Your custom progress bar section title here, Separated by comma (Default: Number of People,Your Details,Pickup).</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="title_first_page">Title First Page</label></th>
-                        <td><input name="title_first_page" type="text" id="title_first_page"
-                                   aria-describedby="tagline-description"
-                                   value="<?php echo $settings->title_first_page; ?>" class="regular-text">
+                        <td><input name="title_first_page" type="text" id="title_first_page" value="<?= $settings->title_first_page; ?>" class="regular-text">
                             <p class="description">Your first page title.</p>
                         </td>
                     </tr>
@@ -266,6 +247,7 @@ class rtbs_plugin {
 
     public function rtbs_admin_css_style() {
         $num_rows_updated = 0;
+
         if (isset($_POST['save_set'])) {
             $num_rows_updated = $this->wpdb->update(
                 'rtbs_settings',
@@ -279,13 +261,14 @@ class rtbs_plugin {
                 array('%d')
             );
         }
+
         $settings = $this->select_settings();
+
         ?>
         <div class="wrap">
             <h1>RTBS Booking CSS Style</h1>
 
             <?php if ($num_rows_updated === 1): ?>
-
                 <div id="setting-error-settings_updated" class="updated settings-error notice is-dismissible">
                     <p><strong>Settings saved.</strong></p>
                     <button type="button" class="notice-dismiss"><span
@@ -298,12 +281,10 @@ class rtbs_plugin {
                 <table class="form-table">
                     <tbody>
                     <tr>
-                        <th scope="row"><label for="blogname">CSS Style</label></th>
+                        <th scope="row"><label for="css_style">CSS Style</label></th>
                         <td>
-                        <textarea name="css_style" rows="30" cols="50" id="blogname"
-                                  class="large-text code"><?php echo(!empty($settings->css_style) ? $settings->css_style : ''); ?></textarea>
-                            <p class="description">Write your CSS Styles for overwrite the default style.
-                                (Optional).</p>
+                            <textarea name="css_style" rows="30" cols="50" id="css_style" class="large-text code"><?php echo(!empty($settings->css_style) ? $settings->css_style : ''); ?></textarea>
+                            <p class="description">Write your CSS Styles for overwrite the default style. (Optional).</p>
                         </td>
                     </tr>
                     </tbody>
@@ -337,8 +318,7 @@ class rtbs_plugin {
             die('Error: RTBS Domain Not Set');
         }
 
-        $todayDate = date("Y-m-d");
-        $tomorrowDate = date('Y-m-d', strtotime($todayDate . "+1 days"));
+        $date = (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d', strtotime("+1 day"));
 
         $credentials = array(
             'host' => $settings->rtbs_domain,
@@ -347,8 +327,9 @@ class rtbs_plugin {
 
         $booking_service = new Rtbs\ApiHelper\BookingServiceImpl($credentials);
 
+        // payment redirects, so do that first
         if ($hdStep == self::STEP_PAYMENT) {
-            $this->step_payment();
+            $this->step_payment($settings, $booking_service);
         }
 
         ?>
@@ -392,471 +373,124 @@ class rtbs_plugin {
 
         <!-- CSS Styles Custom --->
         <style>
-            <?php echo $settings->css_style; ?>
+            <?= $settings->css_style; ?>
         </style>
 
         <div class="container rtbs-container" style="width:100%;">
+
             <?php $this->render_navbar($settings, $hdStep); ?>
+
             <p>&nbsp;</p>
 
             <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
-                <h3 class="tour_name"><?php echo htmlentities($_POST['hd_tour_name']); ?></h3>
+                <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
                 <h4>Selected Date & Time: <span
-                        style="color:#000;"><?php echo date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></span>
+                        style="color:#000;"><?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></span>
                 </h4>
             <?php else: ?>
-                <h2 class="title-first-page"><?php echo htmlentities($settings->title_first_page); ?></h2>
+                <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
                 <h4>
-                    Showing: <?php echo (isset($_REQUEST['tdate'])) ? date('l dS F Y', strtotime($_REQUEST['tdate'])) : date('l dS F Y', strtotime($tomorrowDate)); ?></h4>
+                    Showing: <?= date('l dS F Y', strtotime($date)); ?></h4>
                 <p>
-                    <?php echo $settings->content_first_page; ?>
+                    <?= $settings->content_first_page; ?>
                 </p>
-                <p><i class="fa fa-calendar" aria-hidden="true"></i> <input onchange="selectDate(this.value)"
-                                                                            type="text"
-                                                                            placeholder="Change Date" id="datepicker"
-                                                                            value="<?php echo (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : ''; ?>">
+                <p><i class="fa fa-calendar"></i>
+                    <input onchange="selectDate(this.value)" type="text" placeholder="Change Date" id="datepicker" value="<?= $date; ?>">
                 </p>
             <?php endif; ?>
 
 
-            <div class="row rtbs-tours-step-<?php echo $hdStep; ?>">
+            <div class="row rtbs-tours-step-<?= $hdStep; ?>">
                 <?php
-                $supplier_key = $settings->supplier_key;//a Demonstration Supplier Key. Replace with a Supplier Key as provided to you by Whytewaters
 
-                $supplier = $booking_service->get_supplier($supplier_key);
-                $supplier_name = $supplier->get_name();
-                //echo PHP_EOL . "Details for $supplier_name...<br>";
+                    switch ($hdStep) {
+                        case self::STEP_DETAILS:
+                            $this->step_details($settings, $booking_service);
+                            break;
 
-                /* @var $supplier Rtbs\ApiHelper\Models\Supplier */
-                //echo count($supplier->get_tours()) . ' tours.<br>';
-                if (count($supplier->get_tours()) < 1) {
-                    echo " <p class='rtbs_error_msg'>Error. Require Supplier Key.";
-                    return;
-                }
+                        case self::STEP_CONFIRM:
+                            $this->step_confirm($settings, $booking_service);
+                            break;
 
-
-                switch ($hdStep) {
-                    case self::STEP_AVAILABILITY:
-                        $this->render_step_availability($settings, $booking_service, $shortcode_tour_keys);
-                        break;
-
-                    case self::STEP_DETAILS:
-                        $this->render_step_details($settings, $booking_service);
-
-                }
+                        case self::STEP_AVAILABILITY:
+                        default:
+                            $this->step_availability($settings, $booking_service, $shortcode_tour_keys);
+                            break;
+                    }
 
                 ?>
-
-
-                <!-------------------------- step 3 Booking ------------------------------------->
-                <?php
-                if ($hdStep == self::STEP_CONFIRM) {
-                    $userSumRemain = array_sum($_POST['pr_ice']);
-                    if (array_sum($_POST['pr_ice']) == 0) {
-                        echo '<p class="rtbs_error_msg">Please select at least one unit.</p>';
-                    }
-                    if ($_POST['fname'] == '') {
-                        echo '<p class="rtbs_error_msg">First Name is required.</p>';
-                    }
-                    if ($_POST['lname'] == '') {
-                        echo '<p class="rtbs_error_msg">Last Name is required.</p>';
-                    }
-                    if ($_POST['email'] == '') {
-                        echo '<p class="rtbs_error_msg">Email is required.</p>';
-                    } elseif (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) === false) {
-                        echo '<p class="rtbs_error_msg">Email is not valid.</p>';
-                    }
-                    if ($_POST['phone'] == '') {
-                        echo '<p class="rtbs_error_msg">Phone is required.</p>';
-                    }
-                    if ($userSumRemain > $_POST['hd_remaining']) {
-                        echo '<p class="rtbs_error_msg">Error: ' . $_POST['hd_remaining'] . ' Remaining, too many places selected.</p>';
-                    }
-                    ?>
-                    <?php if (array_sum($_POST['pr_ice']) == 0 || $_POST['fname'] == '' || $_POST['lname'] == '' || $_POST['email'] == '' || $_POST['phone'] == '' || $userSumRemain > $_POST['hd_remaining']) { ?>
-                        <div style="border:1px solid #bdc3c7; padding:10px;" class="col-md-12">
-                            <div class="col-md-2"></div>
-                            <div class="col-md-8">
-                                <?php
-                                $credentials = array(
-                                    "host" => $settings->rtbs_domain,
-                                    "key" => $settings->api_key,
-                                    "pwd" => $settings->password
-                                );
-
-                                $booking_service = new Rtbs\ApiHelper\BookingServiceImpl($credentials);
-
-
-                                $expsectionTitle = explode(",", $settings->section_title);
-                                $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
-
-
-                                $expsectionTitle = explode(",", $settings->section_title);
-                                ?>
-                                <center>
-
-
-                                    <form onSubmit="return validd()" class="form-horizontal" action="" method="post">
-                                        <fieldset>
-                                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                               class=""><?php echo(!empty($expsectionTitle[0]) ? $expsectionTitle[0] : 'Number of People'); ?> </p>
-                                            <?php
-                                            $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
-                                            $price_for_step2 = [];
-
-                                            foreach ($tours[0]->get_prices() as $price) {
-                                                $price_for_step2[] = $price;
-                                            }
-
-
-                                            ?>
-
-                                            <?php
-                                            $z = 1;
-                                            $x = 0;
-                                            foreach ($price_for_step2 as $price_cat) { ?>
-
-                                                <div class="form-group">
-                                                    <label for="select"
-                                                           class="col-lg-2 col-md-2 col-sm-2"><?php echo $price_cat->get_name(); ?></label>
-                                                    <div class="col-lg-10 col-md-10 col-sm-10">
-                                                        <div class="col-md-8 col-sm-8 col-xs-8 col-lg-8">
-                                                            <input type="hidden" name="<?php echo 'rate' . $z; ?>"
-                                                                   id="<?php echo 'rate' . $z; ?>" class=""
-                                                                   value="<?php echo $price_cat->get_rate(); ?>">
-                                                            <select class="form-control nPeople" name="pr_ice[]"
-                                                                    id="<?php echo $z; ?>">
-                                                                <?php for ($i = 0; $i <= 20; $i++) { ?>
-                                                                    <option <?php echo($_POST['pr_ice'][$x] == $i ? 'selected' : ''); ?>
-                                                                        value="<?php echo $i; ?>"><?php echo $i; ?></option>
-                                                                <?php } ?>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-4 col-sm-4 col-xs-4 col-lg-4">
-                                                            <?php echo $price_cat->get_rate(); ?>
-                                                        </div>
-                                                        <input type="hidden" name="hd_price_name[]"
-                                                               value="<?php echo $price_cat->get_name(); ?>">
-                                                        <input type="hidden" name="hd_price_rate[]"
-                                                               value="<?php echo $price_cat->get_rate(); ?>">
-                                                    </div>
-                                                </div>
-                                                <?php $x++; ?>
-                                                <?php $z++; ?>
-                                            <?php } ?>
-
-
-                                            <p style="font-size:16px;" id="totalPrice"></p>
-
-
-                                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                               class=""><?php echo(!empty($expsectionTitle[1]) ? $expsectionTitle[1] : 'Your Details'); ?> </p>
-
-
-                                            <div class="form-group">
-                                                <label for="inputEmail" class="col-lg-3">First Name</label>
-                                                <div class="col-lg-9">
-                                                    <input class="form-control" type="text" name="fname"
-                                                           value="<?php echo htmlentities(isset($_POST['fname']) ? $_POST['fname'] : ''); ?>">
-
-                                                </div>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="inputEmail" class="col-lg-3">Last Name</label>
-                                                <div class="col-lg-9">
-                                                    <input class="form-control" type="text" name="lname"
-                                                           value="<?php echo htmlentities(isset($_POST['lname']) ? $_POST['lname'] : ''); ?>">
-
-                                                </div>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="inputEmail" class="col-lg-3">Email</label>
-                                                <div class="col-lg-9">
-                                                    <input class="form-control" type="email" name="email"
-                                                           value="<?php echo htmlentities(isset($_POST['email']) ? $_POST['email'] : ''); ?>">
-
-                                                </div>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="inputEmail" class="col-lg-3">Phone</label>
-                                                <div class="col-lg-9">
-                                                    <input class="form-control" type="tel" name="phone"
-                                                           value="<?php echo htmlentities(isset($_POST['phone']) ? $_POST['phone'] : ''); ?>">
-
-                                                </div>
-                                            </div>
-
-
-                                            <?php
-                                            if ($settings->is_show_promocode) {
-                                                ?>
-                                                <div class="form-group">
-                                                    <label for="inputEmail" class="col-lg-3">Promo Code</label>
-                                                    <div class="col-lg-9">
-                                                        <input class="form-control" type="text" name="promo"
-                                                               value="<?php echo htmlentities(isset($_POST['promo']) ? $_POST['promo'] : ''); ?>">
-
-                                                    </div>
-                                                </div>
-                                            <?php } ?>
-
-                                            <?php if (count($pickups) > 0) { ?>
-                                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                                   class="">Pickup </p>
-
-                                                <div class="form-group">
-
-                                                    <div class="col-lg-12">
-                                                        <select class="form-control" name="pickup_key">
-                                                            <option value="">Select a Pickup Point</option>
-                                                            <?php foreach ($pickups as $pkup) { ?>
-                                                                <option
-                                                                    value="<?php echo $pkup->get_pickup_key(); ?>"><?php echo($pkup->get_name() == '' ? 'No Pickup available' : $pkup->get_name() . ' - ' . $pkup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pkup->get_minutes() . ' minutes'))); ?></option>
-                                                            <?php } ?>
-                                                        </select>
-
-                                                    </div>
-                                                </div>
-                                            <?php } ?>
-
-
-                                            <div class="hidden_hd">
-                                                <input type="hidden" name="hd_step" value="3">
-                                                <input type="hidden" name="hd_remaining"
-                                                       value="<?php echo htmlentities($_POST['hd_remaining']); ?>"/>
-                                                <input type="hidden" name="hd_tour_key"
-                                                       value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
-                                                <input type="hidden" name="hd_date"
-                                                       value="<?php echo htmlentities($_POST['hd_date']); ?>">
-                                                <input type="hidden" name="hd_tour_name"
-                                                       value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
-                                                <input type="hidden" name="hd_tour_date_time"
-                                                       value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
-                                            </div>
-
-
-                                            <div class="form-group">
-                                                <div class="col-lg-10">
-                                                    <button type="submit" onclick="confirmm()"
-                                                            class="btn btn-primary pull-right" name="button">NEXT
-                                                    </button>
-                                                </div>
-                                            </div>
-
-
-                                        </fieldset>
-                                    </form>
-
-
-                                </center>
-                            </div>
-                        </div>
-
-
-                    <?php } else {
-                    ?>
-
-                    <?php
-                    $index = 0;
-                    $k = array();
-                    foreach ($_POST['pr_ice'] as $key => $value) {
-                        if ($value != '0') {
-                            $m = array_push($k, $index);
-                        }
-                        $index++;
-                    }
-
-                    foreach ($k as $m) {
-                        $pricnamee[] = $_POST['hd_price_name'][$m];
-                    }
-
-                    foreach ($k as $r) {
-                        $rr[] = $_POST['hd_price_rate'][$r];
-                    }
-
-                    foreach ($k as $q) {
-                        $qq[] = $_POST['pr_ice'][$q];
-                    }
-
-
-                    ?>
-
-                        <form action="" method="post">
-
-                            <table class="table">
-                                <tr>
-                                    <td colspan="2">
-                                        <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                            Confirm
-                                            Your Booking </p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        Tour Date Time
-                                    </td>
-                                    <td>
-                                        <?php echo date('l dS F Y h:i A', strtotime($_POST['hd_tour_date_time'])); ?>
-                                    </td>
-                                </tr>
-                                <?php
-                                $i = 0;
-                                $t = 0;
-                                foreach ($pricnamee as $ss) {
-                                    ?>
-                                    <tr>
-                                        <td>
-
-                                            <?php echo '<p>' . $ss . ' x ' . $qq[$i] . '</p>'; ?>
-
-                                        </td>
-                                        <td>
-                                            <?php echo '$' . $rr[$i] * $qq[$i]; ?>
-                                        </td>
-                                    </tr>
-                                    <?php
-                                    $t += $rr[$i] * $qq[$i];
-                                    $i++;
-                                }
-                                ?>
-
-                                <?php
-                                foreach ($_POST['pr_ice'] as $value_price) {
-                                    echo '<input type="hidden" name="pr_ice[]" value="' . $value_price . '">';
-                                }
-                                ?>
-
-
-                                <tr>
-                                    <td>
-                                        Total Price:
-                                    </td>
-                                    <td>
-                                        <?php echo '$' . $t; ?>
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td colspan="2">
-                                        <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                            Your
-                                            Details </p>
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td>
-                                        Name
-                                    </td>
-                                    <td>
-                                        <?php echo preg_replace('/\\\\/', '', $_POST['fname']) . ' ' . preg_replace('/\\\\/', '', $_POST['lname']); ?>
-                                        <input type="hidden" name="fname"
-                                               value="<?php echo preg_replace('/\\\\/', '', $_POST['fname']); ?>">
-                                        <input type="hidden" name="lname"
-                                               value="<?php echo preg_replace('/\\\\/', '', $_POST['lname']); ?>">
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td>
-                                        Email
-                                    </td>
-                                    <td>
-                                        <?php echo htmlentities($_POST['email']); ?>
-                                        <input type="hidden" name="email"
-                                               value="<?php echo htmlentities($_POST['email']); ?>">
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td>
-                                        Phone
-                                    </td>
-                                    <td>
-                                        <?php echo htmlentities($_POST['phone']); ?>
-                                        <input type="hidden" name="phone"
-                                               value="<?php echo htmlentities($_POST['phone']); ?>">
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td colspan="2">
-                                        <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
-                                            Terms &
-                                            Conditions </p>
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td colspan="2">
-
-                                        <p class="terms_cond"><?php echo $settings->terms_cond; ?></p>
-                                        <input type="checkbox" name="tandc" id="chk_conf" value="0"> I have read and
-                                        accept
-                                        the Terms and Conditions.<br/><br/>
-                                    </td>
-                                </tr>
-
-
-                            </table>
-
-
-                            <div class="hidden_hd">
-                                <input type="hidden" name="hd_step" value="4">
-                                <input type="hidden" name="hd_tour_key"
-                                       value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
-                                <input type="hidden" name="hd_date"
-                                       value="<?php echo htmlentities($_POST['hd_date']); ?>">
-                                <input type="hidden" name="hd_tour_name"
-                                       value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
-                                <input type="hidden" name="hd_tour_date_time"
-                                       value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
-                            </div>
-
-                            <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
-                                    name="confirm_payment">Confirm &amp; Make Payment
-                            </button>
-
-                        </form>
-
-                        <script>
-                            $(document).ready(function () {
-                                $('#chk_conf').change(function () {
-                                    if (this.checked) {
-                                        $('#confirm_pay').prop('disabled', false);
-                                    } else {
-                                        $('#confirm_pay').prop('disabled', true);
-                                    }
-                                });
-                            });
-
-                        </script>
-
-                        <?php
-                    }
-                }
-                ?>
-                <!-------------------------- step 4 Booking ------------------------------------->
-
-
             </div>
         </div>
 
 
         <script>
             $(document).ready(function () {
+
+                function isEmail(email) {
+                    var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+                    return regex.test(email);
+                }
+
                 $('select.nPeople').on('change', function () {
-                    var fieldRate = '';
-                    var total = 0.00;
+                    var totalAmount= 0.00,
+                        totalPax = 0;
+
                     $('select.nPeople').each(function () {
-                        fieldRate = 'rate' + $(this).attr('id') + '';
-                        total += parseFloat($('input[name=' + fieldRate + ']').val()) * parseFloat($(this).val());
+                        totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
+                        totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
                     });
-                    $('#totalPrice').html('Total: ' + total.toFixed(2));
+
+                    var numRemaining = $('#hd-remaining').val(),
+                        $htmlTotalPrice = $('#totalPrice');
+
+                    if (totalPax > numRemaining) {
+                        $htmlTotalPrice.css({color: 'red'});
+                        $htmlTotalPrice.html("Only " + numRemaining + " places remaining");
+                    } else {
+                        $htmlTotalPrice.css({color: 'black'});
+                        $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
+                    }
                 });
+
+                $('#details-form').on('submit', function () {
+                    var totalPax = 0,
+                        errors = [],
+                        numRemaining = $('#hd-remaining').val();
+
+                    $('select.nPeople').each(function () {
+                        totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
+                    });
+
+                    if (!$('#rtbsFname').val()) {
+                        errors.push('First Name is required');
+                    }
+
+                    if (!$('#rtbsLname').val()) {
+                        errors.push('Last Name is required');
+                    }
+
+                    if (!$('#rtbsEmail').val()) {
+                        errors.push('Email is required');
+                    } else if (!isEmail($('#rtbsEmail').val())) {
+                        errors.push('Email is not valid');
+                    }
+
+                    if (!$('#rtbsPhone').val()) {
+                        errors.push('Phone is required');
+                    }
+
+                    if (totalPax > numRemaining) {
+                        errors.push("Only " + numRemaining + " places remaining");
+                    }
+
+                    if (errors.length) {
+                        $('.alert-danger').show().html(errors.join('<br>'));
+                        return false;
+                    } else {
+                        return true;
+                    }
+                });
+
             });
 
         </script>
@@ -871,22 +505,241 @@ class rtbs_plugin {
         return '<p><iframe src="' . $ticket_url . '" frameborder="0" style="overflow:hidden;height:1000px;width:100%" height="100%" width="100%"></iframe></p>';
     }
 
+
+    /**
+     * @param stdClass $settings
+     * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
+     */
+    private function step_confirm($settings, $booking_service) {
+
+        $section_titles = explode(",", $settings->section_title);
+        $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
+
+        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+        $price_for_step2 = [];
+
+        foreach ($tours[0]->get_prices() as $price) {
+            $price_for_step2[] = $price;
+        }
+
+        $index = 0;
+        $k = array();
+        foreach ($_POST['prices'] as $key => $value) {
+            if ($value != '0') {
+                $m = array_push($k, $index);
+            }
+            $index++;
+        }
+
+        foreach ($k as $m) {
+            $pricnamee[] = $_POST['hd_price_name'][$m];
+        }
+
+        foreach ($k as $r) {
+            $rr[] = $_POST['hd_price_rate'][$r];
+        }
+
+        foreach ($k as $q) {
+            $qq[] = $_POST['prices'][$q];
+        }
+        ?>
+
+            <form action="" method="post">
+
+                <table class="table">
+                    <tr>
+                        <td colspan="2">
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
+                                Confirm
+                                Your Booking </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Tour Date Time
+                        </td>
+                        <td>
+                            <?= date('l dS F Y h:i A', strtotime($_POST['hd_tour_date_time'])); ?>
+                        </td>
+                    </tr>
+                    <?php
+                    $i = 0;
+                    $t = 0;
+                    foreach ($pricnamee as $ss) {
+                        ?>
+                        <tr>
+                            <td>
+
+                                <?= '<p>' . $ss . ' x ' . $qq[$i] . '</p>'; ?>
+
+                            </td>
+                            <td>
+                                <?= '$' . $rr[$i] * $qq[$i]; ?>
+                            </td>
+                        </tr>
+                        <?php
+                        $t += $rr[$i] * $qq[$i];
+                        $i++;
+                    }
+                    ?>
+
+                    <?php
+                    foreach ($_POST['prices'] as $value_price) {
+                        echo '<input type="hidden" name="prices[]" value="' . $value_price . '">';
+                    }
+                    ?>
+
+
+                    <tr>
+                        <td>
+                            Total Price:
+                        </td>
+                        <td>
+                            <?= '$' . $t; ?>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="2">
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
+                                Your
+                                Details </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            Name
+                        </td>
+                        <td>
+                            <?= preg_replace('/\\\\/', '', $_POST['fname']) . ' ' . preg_replace('/\\\\/', '', $_POST['lname']); ?>
+                            <input type="hidden" name="fname"
+                                   value="<?= preg_replace('/\\\\/', '', $_POST['fname']); ?>">
+                            <input type="hidden" name="lname"
+                                   value="<?= preg_replace('/\\\\/', '', $_POST['lname']); ?>">
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            Email
+                        </td>
+                        <td>
+                            <?= htmlentities($_POST['email']); ?>
+                            <input type="hidden" name="email" value="<?= htmlentities($_POST['email']); ?>">
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            Phone
+                        </td>
+                        <td>
+                            <?= htmlentities($_POST['phone']); ?>
+                            <input type="hidden" name="phone" value="<?= htmlentities($_POST['phone']); ?>">
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="2">
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;" class="">
+                                Terms &
+                                Conditions </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="2">
+                            <p class="terms_cond"><?= $settings->terms_cond; ?></p>
+                            <input type="checkbox" name="tandc" id="chk_conf" value="0"> I have read and accept the
+                            Terms and Conditions.<br/><br/>
+                        </td>
+                    </tr>
+
+                </table>
+
+                <div class="hidden_hd">
+                    <input type="hidden" name="hd_step" value="4">
+                    <input type="hidden" name="hd_tour_key" value="<?= htmlentities($_POST['hd_tour_key']); ?>">
+                    <input type="hidden" name="hd_date" value="<?= htmlentities($_POST['hd_date']); ?>">
+                    <input type="hidden" name="hd_tour_name" value="<?= htmlentities($_POST['hd_tour_name']); ?>">
+                    <input type="hidden" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
+                </div>
+
+                <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
+                        name="confirm_payment">Confirm &amp; Make Payment
+                </button>
+
+            </form>
+
+            <script>
+                $(document).ready(function () {
+                    $('#chk_conf').change(function () {
+                        if (this.checked) {
+                            $('#confirm_pay').prop('disabled', false);
+                        } else {
+                            $('#confirm_pay').prop('disabled', true);
+                        }
+                    });
+                });
+
+            </script>
+
+        <?php
+    }
+
+
+    private function validate_details() {
+        $errors = [];
+
+        if ($_POST) {
+            $total_pax = 0;
+
+            foreach($_POST['prices'] as $price_key => $pax) {
+                $total_pax += $pax;
+            }
+
+            if ($total_pax == 0) {
+                $errors[] ='Please select at least one unit.';
+            }
+
+            if (empty($_POST['fname'])) {
+                $errors[] = 'First Name is required.';
+            }
+
+            if (empty($_POST['lname'])) {
+                $errors[] = 'Last Name is required.';
+            }
+
+            if (empty($_POST['email'])) {
+                $errors[] = 'Email is required.';
+            } elseif (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) === false) {
+                $errors[] = 'Email is not valid.';
+            }
+
+            if (empty($_POST['phone'])) {
+                $errors[] = 'Phone is required.';
+            }
+        }
+
+        return $errors;
+    }
+
+
     /**
      * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
+     * @param array $errors
      */
-    private function render_step_details($settings, $booking_service) {
+    private function step_details($settings, $booking_service, $errors = []) {
 
         $section_titles = explode(",", $settings->section_title);
         $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
         $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+        $prices = $tours[0]->get_prices();
 
-        $prices = [];
-        foreach ($tours[0]->get_prices() as $price) {
-            $prices[] = $price;
-        }
-
-        ?>
+        $qty_range = range(0, $_POST['hd_remaining']);
+    ?>
 
         <div style="border:1px solid #bdc3c7; padding:10px;" class="col-md-12">
             <div class="col-md-2"></div>
@@ -894,49 +747,34 @@ class rtbs_plugin {
 
                 <center>
 
-                    <form onSubmit="return validd()" class="form-horizontal" action="" method="post">
+                    <form class="form-horizontal" action="" method="post" id="details-form">
                         <fieldset>
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                               class=""><?php echo(!empty($section_titles[0]) ? $section_titles[0] : 'Number of People'); ?> </p>
-                            <?php
-                            $z = 1;
-                            foreach ($prices as $price) { ?>
+                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"><?php echo(!empty($section_titles[0]) ? $section_titles[0] : 'Number of People'); ?> </p>
+                            <?php foreach ($prices as $price): ?>
 
                                 <div class="form-group">
-                                    <label for="select"
-                                           class="col-lg-2 col-md-2 col-sm-2"><?php echo $price->get_name(); ?></label>
-                                    <div class="col-lg-10 col-md-10 col-sm-10">
-                                        <div class="col-md-8 col-sm-8 col-xs-8 col-lg-8">
-
-                                            <input type="hidden" name="<?php echo 'rate' . $z; ?>"
-                                                   id="<?php echo 'rate' . $z; ?>" class=""
-                                                   value="<?php echo $price->get_rate(); ?>">
-                                            <select class="form-control nPeople" name="pr_ice[]"
-                                                    id="<?php echo $z; ?>">
-
-                                                <?php for ($i = 0; $i <= 20; $i++) { ?>
-                                                    <option
-                                                        value="<?php echo $i; ?>"><?php echo $i; ?></option>
-                                                <?php } ?>
+                                    <label for="select" class="col-md-6"><div class="text-left"><?= $price->get_name(); ?></div></label>
+                                    <div class="col-md-6">
+                                        <div class="col-md-6">
+                                            <input type="hidden" name="rate[<?= $price->get_price_key(); ?>]" class="rate" value="<?= $price->get_rate(); ?>">
+                                            <select class="form-control nPeople" name="price[<?= $price->get_price_key(); ?>]" id="<?= $price->get_price_key(); ?>" data-rate="<?= $price->get_rate(); ?>" data-pax="<?= $price->get_passenger_count(); ?>">
+                                                <?php foreach ($qty_range as $qty): ?>
+                                                    <option value="<?= $qty; ?>"><?= $qty; ?></option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </div>
 
-                                        <div class="col-md-4 col-sm-4 col-xs-4 col-lg-4">
-
-                                            <?php echo '$' . $price->get_rate(); ?>
+                                        <div class="col-md-6">
+                                            <div class="text-right"><?= '$' . $price->get_rate(); ?></div>
                                         </div>
 
-                                        <input type="hidden" name="hd_price_name[]"
-                                               value="<?php echo $price->get_name(); ?>">
-                                        <input type="hidden" name="hd_price_rate[]"
-                                               value="<?php echo $price->get_rate(); ?>">
+                                        <input type="hidden" name="hd_price_name[]" value="<?= $price->get_name(); ?>">
+                                        <input type="hidden" name="hd_price_rate[]" value="<?= $price->get_rate(); ?>">
                                     </div>
                                 </div>
-                                <?php $z++; ?>
-                            <?php } ?>
+                            <?php endforeach; ?>
 
-
-                            <p style="font-size:16px;" id="totalPrice"></p>
+                            <p style="font-size:16px;" id="totalPrice">Total: $0.00</p>
 
 
                             <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
@@ -946,8 +784,7 @@ class rtbs_plugin {
                             <div class="form-group">
                                 <label for="rtbsFname" class="col-lg-3">First Name</label>
                                 <div class="col-lg-9">
-                                    <input id="rtbsFname" class="form-control" type="text" name="fname"
-                                           value="">
+                                    <input id="rtbsFname" class="form-control" type="text" name="fname" value="">
 
                                 </div>
                             </div>
@@ -955,9 +792,7 @@ class rtbs_plugin {
                             <div class="form-group">
                                 <label for="rtbsLname" class="col-lg-3">Last Name</label>
                                 <div class="col-lg-9">
-                                    <input id="rtbsLname" class="form-control" type="text" name="lname"
-                                           value="">
-
+                                    <input id="rtbsLname" class="form-control" type="text" name="lname" value="">
                                 </div>
                             </div>
 
@@ -965,7 +800,6 @@ class rtbs_plugin {
                                 <label for="rtbsEmail" class="col-lg-3">Email</label>
                                 <div class="col-lg-9">
                                     <input id="rtbsEmail" class="form-control" type="email" name="email" value="">
-
                                 </div>
                             </div>
 
@@ -977,58 +811,46 @@ class rtbs_plugin {
                             </div>
 
 
-                            <?php
-                            if ($settings->is_show_promocode) {
-                                ?>
+                            <?php if ($settings->is_show_promocode): ?>
                                 <div class="form-group">
                                     <label for="rtbsPromo" class="col-lg-3">Promo Code</label>
                                     <div class="col-lg-9">
                                         <input id="rtbsPromo" class="form-control" type="text" name="promo" value="">
                                     </div>
                                 </div>
-                            <?php } ?>
+                            <?php endif; ?>
 
-                            <?php if (count($pickups) > 0) { ?>
-                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                                   class="">
-                                    Pickup </p>
+                            <?php if (count($pickups) > 0): ?>
+                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Pickup </p>
 
                                 <div class="form-group">
 
                                     <div class="col-lg-12">
                                         <select class="form-control" name="pickup_key">
                                             <option value="">Select a Pickup Point</option>
-                                            <?php foreach ($pickups as $pkup) { ?>
-                                                <option
-                                                    value="<?php echo $pkup->get_pickup_key(); ?>"><?php echo($pkup->get_name() == '' ? 'No Pickup available' : $pkup->get_name() . ' - ' . $pkup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pkup->get_minutes() . ' minutes'))); ?></option>
-                                            <?php } ?>
+                                            <?php foreach ($pickups as $pkup): ?>
+                                                <option value="<?= $pkup->get_pickup_key(); ?>"><?= ($pkup->get_name() == '' ? 'No Pickup available' : $pkup->get_name() . ' - ' . $pkup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pkup->get_minutes() . ' minutes'))); ?></option>
+                                            <?php endforeach; ?>
                                         </select>
 
                                     </div>
                                 </div>
-                            <?php } ?>
-
+                            <?php endif; ?>
 
                             <div class="hidden_hd">
                                 <input type="hidden" name="hd_step" value="3">
-                                <input type="hidden" name="hd_remaining"
-                                       value="<?php echo htmlentities($_POST['hd_remaining']); ?>"/>
-                                <input type="hidden" name="hd_tour_key"
-                                       value="<?php echo htmlentities($_POST['hd_tour_key']); ?>">
-                                <input type="hidden" name="hd_date"
-                                       value="<?php echo htmlentities($_POST['hd_date']); ?>">
-                                <input type="hidden" name="hd_tour_name"
-                                       value="<?php echo htmlentities($_POST['hd_tour_name']); ?>">
-                                <input type="hidden" name="hd_tour_date_time"
-                                       value="<?php echo htmlentities($_POST['hd_tour_date_time']); ?>">
+                                <input type="hidden" name="hd_remaining" id="hd-remaining" value="<?= htmlentities($_POST['hd_remaining']); ?>"/>
+                                <input type="hidden" name="hd_tour_key" value="<?= htmlentities($_POST['hd_tour_key']); ?>">
+                                <input type="hidden" name="hd_date" value="<?= htmlentities($_POST['hd_date']); ?>">
+                                <input type="hidden" name="hd_tour_name" value="<?= htmlentities($_POST['hd_tour_name']); ?>">
+                                <input type="hidden" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
                             </div>
 
+                            <div class="alert alert-danger" style="display: none;"></div>
 
                             <div class="form-group">
                                 <div class="col-lg-10">
-                                    <button type="submit" onclick="confirmm()"
-                                            class="btn btn-primary pull-right" name="button">NEXT
-                                    </button>
+                                    <button type="submit" class="btn btn-primary pull-right" name="button">NEXT &gt;</button>
                                 </div>
                             </div>
 
@@ -1036,12 +858,12 @@ class rtbs_plugin {
                         </fieldset>
                     </form>
 
-
                 </center>
             </div>
         </div>
 
         <div class="col-md-2"></div>
+
         <?php
     }
 
@@ -1050,7 +872,7 @@ class rtbs_plugin {
      * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      */
-    private function render_step_availability($settings, $booking_service, $shortcode_tour_keys) {
+    private function step_availability($settings, $booking_service, $shortcode_tour_keys) {
 
         $date = (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d');
 
@@ -1089,28 +911,21 @@ class rtbs_plugin {
                 ?>
                 <div class="col-md-12">
                     <div class="panel panel-default">
-                        <div class="panel-heading"><h4><?php echo htmlentities($tour->get_name()); ?></h4></div>
+                        <div class="panel-heading"><h4><?= htmlentities($tour->get_name()); ?></h4></div>
                         <div class="panel-body">
 
                             <?php foreach ($sessions as $session): ?>
 
                                 <form action="" method="post">
                                     <p>
-                                        <?php echo date('h:i a', strtotime($session->get_datetime())) . ($settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
+                                        <?= date('h:i a', strtotime($session->get_datetime())) . ($settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
                                         <input type="hidden" name="hd_step" value="2">
-                                        <input type="hidden" name="hd_remaining"
-                                               value="<?php echo $session->get_remaining(); ?>"/>
-                                        <input type="hidden" name="hd_tour_key"
-                                               value="<?php echo $tour->get_tour_key(); ?>">
-                                        <input type="hidden" name="hd_date"
-                                               value="<?php echo (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d'); ?>">
-                                        <input type="hidden" name="hd_tour_name"
-                                               value="<?php echo $tour->get_name(); ?>">
-                                        <input type="hidden" name="hd_tour_date_time"
-                                               value="<?php echo $session->get_datetime(); ?>">
-                                        <button <?php echo ($session->is_open()) ? '' : 'disabled' ?>
-                                            class="btn btn-primary" type="submit"
-                                            name="button"><?php echo $session->get_state(); ?></button>
+                                        <input type="hidden" name="hd_remaining" value="<?= $session->get_remaining(); ?>"/>
+                                        <input type="hidden" name="hd_tour_key" value="<?= $tour->get_tour_key(); ?>">
+                                        <input type="hidden" name="hd_date" value="<?= $date; ?>">
+                                        <input type="hidden" name="hd_tour_name" value="<?= $tour->get_name(); ?>">
+                                        <input type="hidden" name="hd_tour_date_time" value="<?= $session->get_datetime(); ?>">
+                                        <button <?= ($session->is_open()) ? '' : 'disabled' ?> class="btn btn-primary" type="submit" name="button"><?= $session->get_state(); ?></button>
                                     </p>
                                 </form>
                             <?php endforeach; ?>
@@ -1123,86 +938,32 @@ class rtbs_plugin {
         }
     }
 
+    /**
+     * @param stdClass $settings
+     * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
+     */
+    private function step_payment($settings, $booking_service) {
 
-    private function step_payment() {
-
-        $settings = $this->select_settings();
-
-        // To get an API key contact http://whytewaters.com
-        $credentials = array(
-            "host" => $settings->rtbs_domain,
-            "key" => $settings->api_key,
-        );
-
-        $booking_service = new Rtbs\ApiHelper\BookingServiceImpl($credentials);
-
-        $supplier_key = $settings->supplier_key; //a Demonstration Supplier Key. Replace with a Supplier Key as provided to you by Whytewaters
-
-        $supplier = $booking_service->get_supplier($supplier_key);
-        $supplier_name = $supplier->get_name();
-        //echo PHP_EOL . "Details for $supplier_name...<br>";
-
-        /* @var $supplier Rtbs\ApiHelper\Models\Supplier */
-        //echo count($supplier->get_tours()) . ' tours.<br>';
-        if (count($supplier->get_tours()) < 1) {
-            echo " Stopping.";
-            return;
-        }
-
-        //echo PHP_EOL,"Tours for $supplier_name...";
-        //echo count($attribute);
-        if (!empty($attribute[0])) {
-            $tour_keys = array();
-            foreach ($attribute as $tour) {
-                $tour_keys[] = $tour;
-            }
-        } else {
-            $tour_keys = array();
-            foreach ($supplier->get_tours() as $tour) {
-                $tour_keys[] = $tour->get_tour_key();
-            }
-        }
-
-        //print_r($tour_keys);
-
-        $tours = $booking_service->get_tours($tour_keys);
-        //echo count($tours).'<br>';
-
-        if (empty($tours)) {
-            echo " Stopping." . PHP_EOL;
-            return;
-        }
+        $supplier = $booking_service->get_supplier($settings->supplier_key);
 
         $tour_keys = array($_POST['hd_tour_key']);
         $date = $_POST['hd_date'];
         $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($supplier->get_supplier_key(), $tour_keys, $date);
 
+        /** @var Rtbs\ApiHelper\Models\Session $my_session */
+        $my_session = null;
 
-        /** @var Rtbs\ApiHelper\Models\Session[] $sessions */
-        $sessions = $sessions_and_advanced_dates['sessions'];
-
-        if (!empty($sessions_and_advanced_dates['advance_dates'])) {
-            echo PHP_EOL . "Found " . count($sessions_and_advanced_dates['advance_dates']) . " advance dates.";
-        }
-
-        $found = false;
-        foreach ($sessions as $session) {
-            if ($session->is_open() && sizeof($session->get_prices()) > 0) {
-                $found = $session;
+        /** @var Rtbs\ApiHelper\Models\Session $session */
+        foreach ($sessions_and_advanced_dates['sessions'] as $session) {
+            if ($session->get_datetime() == $_POST['hd_tour_date_time']) {
+                $my_session = $session;
                 break;
             }
         }
-        if (!$found) {
-            echo PHP_EOL . "No open sessions with prices found, stopping.";
-            echo PHP_EOL;
-            return;
-        }
-        $session = $found;
 
-        $session->set_datetime($_POST['hd_tour_date_time']);
         $booking = new Rtbs\ApiHelper\Models\Booking();
-        $booking->set_tour_key($session->get_tour_key());
-        $booking->set_datetime($session->get_datetime());
+        $booking->set_tour_key($my_session->get_tour_key());
+        $booking->set_datetime($_POST['hd_tour_date_time']);
         $booking->set_first_name($_POST['fname']);
         $booking->set_last_name($_POST['lname']);
         $booking->set_email($_POST['email']);
@@ -1221,19 +982,21 @@ class rtbs_plugin {
         }
 
 
-        $prices = $session->get_prices();
+        $prices = $my_session->get_prices();
         $p = 0;
-        foreach ($_POST['pr_ice'] as $value) {
-            $booking->add_price_selection($prices[$p], $value);
+        foreach ($_POST['prices'] as $qty) {
+            $booking->add_price_selection($prices[$p], $qty);
             $p++;
         }
 
-
         $url_or_booking = $booking_service->make_booking($booking);
+
+        var_dump($url_or_booking);
+die('here i broke it');
         $urlReturnPayment = var_export($url_or_booking, true);
         $ret_URL = substr($urlReturnPayment, 1, -1);
         if ($urlReturnPayment == '') {
-            //echo '<p class="rtbs_error_msg">Error. insufficient capacity or session closed. </p>';
+            echo '<p class="rtbs_error_msg">Error. insufficient capacity or session closed. </p>';
         } else {
             echo '<script>window.location.href="' . $ret_URL . '"</script>';
         }
@@ -1248,7 +1011,7 @@ class rtbs_plugin {
             <center>
 
                 <div
-                    class="col-md-3 col-sm-3 col-xs-3 <?php echo ($hdStep == self::STEP_AVAILABILITY) ? 'selected' : '' ?>">
+                    class="col-md-3 col-sm-3 col-xs-3 <?= ($hdStep == self::STEP_AVAILABILITY) ? 'selected' : '' ?>">
                     <div style="margin-top: 15px;" class="col-md-2 numberCircle">1</div>
                     <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
                         <p class="text-primary"><?php echo(!empty($page_titles[0]) ? $page_titles[0] : 'AVAILABILITY'); ?></p>
