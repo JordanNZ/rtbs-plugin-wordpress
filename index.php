@@ -26,7 +26,7 @@ class rtbs_plugin {
         register_activation_hook(__FILE__, array($this, 'plugin_activate_init'));
         register_deactivation_hook(__FILE__, array($this, 'plugin_deactivate'));
 
-        add_action('rtbs_admin_menu', array($this, 'build_admin_menu'));
+        add_action('admin_menu', array($this, 'build_admin_menu'));
         add_action('wp_enqueue_scripts', array($this, 'plugin_enqueue_scripts'));
 
         add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
