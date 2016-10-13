@@ -1,0 +1,52 @@
+
+.rtbs-container {
+    width:100%;
+}
+
+.rtbs-plugin-section-header {
+    font-size: 18px;
+    background-color: #ecf0f1;
+    padding: 10px;
+}
+
+.rtbs-plugin-title {
+    color: #e74c3c;
+}
+
+.rtbs-plugin-box {
+    border: 1px solid #bdc3c7;
+    padding: 10px;
+}
+
+.rtbs-plugin-total {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.rtbs-plugin-navbar {
+    background-color: #ecf0f1;
+    height: 70px;
+}
+
+.rtbs-plugin-navbar-number {
+    border-radius: 50%;
+    behavior: url(PIE.htc); /* remove if you don't care about IE8 */
+
+    width: 39px;
+    height: 39px;
+    padding: 6px;
+
+    background: #fff;
+    border: 2px solid #666;
+    color: #666;
+    text-align: center;
+
+    font: 22px Arial, sans-serif;
+
+    margin-top: 15px;
+}
+
+.rtbs-plugin-navbar-text {
+    margin-top: -32px;
+    margin-left: 24px;
+}

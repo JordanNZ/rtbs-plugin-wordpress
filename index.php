@@ -26,7 +26,8 @@ class rtbs_plugin {
         register_activation_hook(__FILE__, array($this, 'plugin_activate_init'));
         register_deactivation_hook(__FILE__, array($this, 'plugin_deactivate'));
 
-        add_action('admin_menu', array($this, 'build_admin_menu'));
+        add_action('rtbs_admin_menu', array($this, 'build_admin_menu'));
+        add_action('wp_enqueue_scripts', array($this, 'plugin_enqueue_scripts'));
 
         add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
         add_shortcode('rtbs_show_ticket', array($this, 'rtbs_show_ticket'));
@@ -71,6 +72,14 @@ class rtbs_plugin {
         $this->wpdb->query('DROP TABLE rtbs_settings');
     }
 
+    public function plugin_enqueue_scripts() {
+        wp_enqueue_script('jquery');
+        wp_enqueue_script('jquery-ui-datepicker');
+
+        // TODO we should really prefix these with rtbs-wordpress-plugin
+        wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
+        wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
+    }
 
     public function build_admin_menu() {
         add_menu_page('RTBS', 'RTBS', '', __FILE__, 'moveing_company', plugins_url('img/settings.png', __FILE__));
@@ -135,7 +144,7 @@ class rtbs_plugin {
                 </div>
             <?php endif; ?>
 
-            <form class="" action="" method="post">
+            <form action="" method="post">
 
                 <table class="form-table">
                     <tbody>
@@ -276,7 +285,7 @@ class rtbs_plugin {
                 </div>
             <?php endif; ?>
 
-            <form class="" action="" method="post">
+            <form action="" method="post">
 
                 <table class="form-table">
                     <tbody>
@@ -337,168 +346,169 @@ class rtbs_plugin {
         }
 
         ?>
-        <link rel="stylesheet" href="https://bootswatch.com/cerulean/bootstrap.css" media="screen" title="no title">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.css"
-              media="screen" title="no title">
-        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-        <style>
-            .numberCircle {
-                border-radius: 50%;
-                behavior: url(PIE.htc); /* remove if you don't care about IE8 */
 
-                width: 39px;
-                height: 39px;
-                padding: 6px;
+        <div class="rtbs-plugin">
+            <a name="rtbs-booking"></a>
+            <!-- CSS Styles Custom --->
+            <style>
+                <?= $settings->css_style; ?>
+            </style>
 
-                background: #fff;
-                border: 2px solid #666;
-                color: #666;
-                text-align: center;
+            <div class="container rtbs-container">
 
-                font: 22px Arial, sans-serif;
-            }
+                <?php $this->render_navbar($settings, $hdStep); ?>
 
-            .title-rtbs {
-                color: #e74c3c;
-            }
-        </style>
-        <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+                <p>&nbsp;</p>
 
-        <script>
-            $(function () {
-                $("#datepicker").datepicker({dateFormat: 'yy-mm-dd'});
-            });
-
-            function selectDate(str) {
-                window.location.href = "index.php?tdate=" + str;
-            }
-        </script>
-
-        <!-- CSS Styles Custom --->
-        <style>
-            <?= $settings->css_style; ?>
-        </style>
-
-        <div class="container rtbs-container" style="width:100%;">
-
-            <?php $this->render_navbar($settings, $hdStep); ?>
-
-            <p>&nbsp;</p>
-
-            <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
-                <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
-                <h4>Selected Date & Time: <span
-                        style="color:#000;"><?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></span>
-                </h4>
-            <?php else: ?>
-                <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
-                <h4>
-                    Showing: <?= date('l dS F Y', strtotime($date)); ?></h4>
-                <p>
-                    <?= $settings->content_first_page; ?>
-                </p>
-                <p><i class="fa fa-calendar"></i>
-                    <input onchange="selectDate(this.value)" type="text" placeholder="Change Date" id="datepicker" value="<?= $date; ?>">
-                </p>
-            <?php endif; ?>
+                <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
+                    <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
+                    <h4>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h4>
+                <?php else: ?>
+                    <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
+                    <h4>
+                        Showing: <?= date('l dS F Y', strtotime($date)); ?></h4>
+                    <p>
+                        <?= $settings->content_first_page; ?>
+                    </p>
+                    <p><i class="fa fa-calendar"></i>
+                        <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
+                    </p>
+                <?php endif; ?>
 
 
-            <div class="row rtbs-tours-step-<?= $hdStep; ?>">
-                <?php
+                <div class="row rtbs-tours-step-<?= $hdStep; ?>">
+                    <?php
 
-                    switch ($hdStep) {
-                        case self::STEP_DETAILS:
-                            $this->step_details($settings, $booking_service);
-                            break;
+                        switch ($hdStep) {
+                            case self::STEP_DETAILS:
+                                $this->step_details($settings, $booking_service);
+                                break;
 
-                        case self::STEP_CONFIRM:
-                            $this->step_confirm($settings);
-                            break;
+                            case self::STEP_CONFIRM:
+                                $this->step_confirm($settings);
+                                break;
 
-                        case self::STEP_AVAILABILITY:
-                        default:
-                            $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
-                            break;
-                    }
+                            case self::STEP_AVAILABILITY:
+                            default:
+                                $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
+                                break;
+                        }
 
-                ?>
+                    ?>
+                </div>
             </div>
+
+
+            <script>
+                var rtbsPluginWordpress = (function ($) {
+
+                    var $selectPeople,
+                        $datePicker;
+
+                    var isEmail = function(email) {
+                        var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+                        return regex.test(email);
+                    };
+
+                    var actionSelectDate = function selectDate() {
+                        var date = $(this).val();
+                        window.location.href = "index.php?tdate=" + date + "#rtbs-booking";
+                    };
+
+                    var actionPeopleChange = function() {
+                        var totalAmount= 0.00,
+                            totalPax = 0;
+
+                        $selectPeople.each(function () {
+                            totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
+                            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
+                        });
+
+                        var numRemaining = $('#hd-remaining').val(),
+                            $htmlTotalPrice = $('#totalPrice');
+
+                        if (totalPax > numRemaining) {
+                            $htmlTotalPrice.css({color: 'red'});
+                            $htmlTotalPrice.html("Only " + numRemaining + " places remaining");
+                        } else {
+                            $htmlTotalPrice.css({color: 'black'});
+                            $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
+                        }
+                    };
+
+                    actionSubmitForm = function() {
+                        var totalPax = 0,
+                            errors = [],
+                            numRemaining = $('#hd-remaining').val();
+
+                        $('select.nPeople').each(function () {
+                            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
+                        });
+
+                        if (!$('#rtbsFname').val()) {
+                            errors.push('First Name is required');
+                        }
+
+                        if (!$('#rtbsLname').val()) {
+                            errors.push('Last Name is required');
+                        }
+
+                        if (!$('#rtbsEmail').val()) {
+                            errors.push('Email is required');
+                        } else if (!isEmail($('#rtbsEmail').val())) {
+                            errors.push('Email is not valid');
+                        }
+
+                        if (!$('#rtbsPhone').val()) {
+                            errors.push('Phone is required');
+                        }
+
+                        if (totalPax > numRemaining) {
+                            errors.push("Only " + numRemaining + " places remaining");
+                        }
+
+                        if (errors.length) {
+                            $('.alert-danger').show().html(errors.join('<br>'));
+                            return false;
+                        } else {
+                            return true;
+                        }
+                    };
+
+                    var actionTandcChecked = function() {
+                        $('#confirm_pay').prop('disabled', !$(this).is(':checked'));
+                    };
+
+                    var cacheElements = function() {
+                        $selectPeople = $('select.nPeople');
+                        $datePicker = $('.rtbs-plugin-datepicker');
+                    };
+
+                    var bindEvents = function() {
+                        $selectPeople.on('change', actionPeopleChange);
+                        $('#details-form').on('submit', actionSubmitForm);
+                        $('#rtbs-checkbox-tandc').on('change', actionTandcChecked);
+                        $datePicker.on('change', actionSelectDate);
+                    };
+
+                    var init = function() {
+                        cacheElements();
+                        bindEvents();
+
+                        $datePicker.datepicker({dateFormat: 'yy-mm-dd'});
+                    };
+
+                    return {
+                        init: init
+                    };
+
+                })(jQuery);
+
+                jQuery(document).ready(function() {
+                    rtbsPluginWordpress.init()
+                });
+            </script>
         </div>
-
-
-        <script>
-            $(document).ready(function () {
-
-                function isEmail(email) {
-                    var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
-                    return regex.test(email);
-                }
-
-                $('select.nPeople').on('change', function () {
-                    var totalAmount= 0.00,
-                        totalPax = 0;
-
-                    $('select.nPeople').each(function () {
-                        totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
-                        totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
-                    });
-
-                    var numRemaining = $('#hd-remaining').val(),
-                        $htmlTotalPrice = $('#totalPrice');
-
-                    if (totalPax > numRemaining) {
-                        $htmlTotalPrice.css({color: 'red'});
-                        $htmlTotalPrice.html("Only " + numRemaining + " places remaining");
-                    } else {
-                        $htmlTotalPrice.css({color: 'black'});
-                        $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
-                    }
-                });
-
-                $('#details-form').on('submit', function () {
-                    var totalPax = 0,
-                        errors = [],
-                        numRemaining = $('#hd-remaining').val();
-
-                    $('select.nPeople').each(function () {
-                        totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
-                    });
-
-                    if (!$('#rtbsFname').val()) {
-                        errors.push('First Name is required');
-                    }
-
-                    if (!$('#rtbsLname').val()) {
-                        errors.push('Last Name is required');
-                    }
-
-                    if (!$('#rtbsEmail').val()) {
-                        errors.push('Email is required');
-                    } else if (!isEmail($('#rtbsEmail').val())) {
-                        errors.push('Email is not valid');
-                    }
-
-                    if (!$('#rtbsPhone').val()) {
-                        errors.push('Phone is required');
-                    }
-
-                    if (totalPax > numRemaining) {
-                        errors.push("Only " + numRemaining + " places remaining");
-                    }
-
-                    if (errors.length) {
-                        $('.alert-danger').show().html(errors.join('<br>'));
-                        return false;
-                    } else {
-                        return true;
-                    }
-                });
-
-            });
-
-        </script>
-
         <?php
     }
 
@@ -531,12 +541,12 @@ class rtbs_plugin {
 
         ?>
 
-            <form action="" method="post">
+            <form action="#rtbs-booking" method="post">
 
                 <table class="table">
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Confirm Your Booking </p>
+                            <div class="rtbs-plugin-section-header">Confirm Your Booking </div>
                         </td>
                     </tr>
                     <tr>
@@ -562,7 +572,7 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Your Details</p>
+                            <div class="rtbs-plugin-section-header">Your Details</div>
                         </td>
                     </tr>
 
@@ -599,14 +609,14 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Terms &amp; Conditions </p>
+                            <div class="rtbs-plugin-section-header">Terms &amp; Conditions</div>
                         </td>
                     </tr>
 
                     <tr>
                         <td colspan="2">
                             <p class="terms_cond"><?= $settings->terms_cond; ?></p>
-                            <input type="checkbox" name="tandc" id="chk_conf" value="0"> I have read and accept the
+                            <input type="checkbox" name="tandc" id="rtbs-checkbox-tandc" value="0"> I have read and accept the
                             Terms and Conditions.<br/><br/>
                         </td>
                     </tr>
@@ -630,19 +640,6 @@ class rtbs_plugin {
 
             </form>
 
-            <script>
-                $(document).ready(function () {
-                    $('#chk_conf').change(function () {
-                        if (this.checked) {
-                            $('#confirm_pay').prop('disabled', false);
-                        } else {
-                            $('#confirm_pay').prop('disabled', true);
-                        }
-                    });
-                });
-
-            </script>
-
         <?php
     }
 
@@ -661,15 +658,15 @@ class rtbs_plugin {
         $qty_range = range(0, $_POST['hd_remaining']);
     ?>
 
-        <div style="border:1px solid #bdc3c7; padding:10px;" class="col-md-12">
+        <div class="col-md-12 rtbs-plugin-box">
             <div class="col-md-2"></div>
             <div class="col-md-8">
 
                 <center>
 
-                    <form class="form-horizontal" action="" method="post" id="details-form">
+                    <form class="form-horizontal" action="#rtbs-booking" method="post" id="details-form">
                         <fieldset>
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"><?php echo(!empty($section_titles[0]) ? $section_titles[0] : 'Number of People'); ?> </p>
+                            <p class="rtbs-plugin-section-header"><?php echo(!empty($section_titles[0]) ? $section_titles[0] : 'Number of People'); ?> </p>
                             <?php foreach ($prices as $price): ?>
 
                                 <div class="form-group">
@@ -693,11 +690,10 @@ class rtbs_plugin {
                                 </div>
                             <?php endforeach; ?>
 
-                            <p style="font-size:16px;" id="totalPrice">Total: $0.00</p>
+                            <p class="rtbs-plugin-total" id="totalPrice">Total: $0.00</p>
 
 
-                            <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;"
-                               class=""><?php echo(!empty($section_titles[1]) ? $section_titles[1] : 'Your Details'); ?> </p>
+                            <p class="rtbs-plugin-section-header"><?php echo(!empty($section_titles[1]) ? $section_titles[1] : 'Your Details'); ?> </p>
 
 
                             <div class="form-group">
@@ -740,7 +736,7 @@ class rtbs_plugin {
                             <?php endif; ?>
 
                             <?php if (count($pickups) > 0): ?>
-                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Pickup </p>
+                                <p class="rtbs-plugin-section-header">Pickup </p>
 
                                 <div class="form-group">
 
@@ -835,7 +831,7 @@ class rtbs_plugin {
 
                             <?php foreach ($sessions as $session): ?>
 
-                                <form action="" method="post">
+                                <form action="#rtbs-booking" method="post">
                                     <p>
                                         <?= date('h:i a', strtotime($session->get_datetime())) . ($settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
                                         <input type="hidden" name="hd_step" value="2">
@@ -905,37 +901,37 @@ class rtbs_plugin {
         $page_titles = explode(",", $settings->page_title);
 
         ?>
-        <div style="background-color:#ecf0f1; height:70px;" class="row hidden-xs hidden-sm">
+        <div class="row hidden-xs hidden-sm rtbs-plugin-navbar">
             <center>
 
                 <div
                     class="col-md-3 col-sm-3 col-xs-3 <?= ($hdStep == self::STEP_AVAILABILITY) ? 'selected' : '' ?>">
-                    <div style="margin-top: 15px;" class="col-md-2 numberCircle">1</div>
-                    <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
+                    <div class="col-md-2 rtbs-plugin-navbar-number">1</div>
+                    <div class="col-md-10 rtbs-plugin-navbar-text">
                         <p class="text-primary"><?php echo(!empty($page_titles[0]) ? $page_titles[0] : 'AVAILABILITY'); ?></p>
 
                     </div>
                 </div>
 
                 <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_DETAILS ? 'selected' : ''); ?>">
-                    <div style="margin-top: 15px;" class="col-md-2 numberCircle">2</div>
-                    <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
+                    <div class="col-md-2 rtbs-plugin-navbar-number">2</div>
+                    <div class="col-md-10 rtbs-plugin-navbar-text">
                         <p class="text-primary"><?php echo(!empty($page_titles[1]) ? $page_titles[1] : 'DETAILS'); ?></p>
 
                     </div>
                 </div>
 
                 <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_CONFIRM ? 'selected' : ''); ?>">
-                    <div style="margin-top: 15px;" class="col-md-2 numberCircle">3</div>
-                    <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
+                    <div class="col-md-2 rtbs-plugin-navbar-number">3</div>
+                    <div class="col-md-10 rtbs-plugin-navbar-text">
                         <p class="text-primary"><?php echo(!empty($page_titles[2]) ? $page_titles[2] : 'CONFIRM'); ?></p>
 
                     </div>
                 </div>
 
                 <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_PAYMENT ? 'selected' : ''); ?>">
-                    <div style="margin-top: 15px;" class="col-md-2 numberCircle">4</div>
-                    <div class="col-md-10" style="margin-top: -32px; margin-left: 24px;">
+                    <div class="col-md-2 rtbs-plugin-navbar-number">4</div>
+                    <div class="col-md-10 rtbs-plugin-navbar-text">
                         <p class="text-primary"><?php echo(!empty($page_titles[3]) ? $page_titles[3] : 'PAYMENT'); ?></p>
 
                     </div>
