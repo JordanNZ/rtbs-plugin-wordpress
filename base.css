@@ -1,12 +1,14 @@
 
 .rtbs-container {
     width:100%;
+    background: #eee;
 }
 
 .rtbs-plugin-section-header {
     font-size: 18px;
-    background-color: #ecf0f1;
+    background-color: #0F5592;
     padding: 10px;
+    color: white;
 }
 
 .rtbs-plugin-title {
@@ -24,8 +26,9 @@
 }
 
 .rtbs-plugin-navbar {
-    background-color: #ecf0f1;
+    background-color: #0F5592;
     height: 70px;
+    color: white;
 }
 
 .rtbs-plugin-navbar-number {
@@ -36,8 +39,8 @@
     height: 39px;
     padding: 6px;
 
-    background: #fff;
-    border: 2px solid #666;
+    background: silver;
+    border: 2px solid #999;
     color: #666;
     text-align: center;
 
@@ -47,6 +50,21 @@
 }
 
 .rtbs-plugin-navbar-text {
+    color: silver;
     margin-top: -32px;
     margin-left: 24px;
+}
+
+.rtbs-plugin-navbar-active .rtbs-plugin-navbar-number {
+    background: white;
+}
+
+.rtbs-plugin-navbar-active .rtbs-plugin-navbar-text {
+    color: white;
+    font-weight: bold;
+}
+
+.rtbs-plugin-content {
+    padding: 10px 5px 10px 5px;
+    color: black;
 }

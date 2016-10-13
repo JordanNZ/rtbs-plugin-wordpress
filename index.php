@@ -358,43 +358,44 @@ class rtbs_plugin {
 
                 <?php $this->render_navbar($settings, $hdStep); ?>
 
-                <p>&nbsp;</p>
+                <div class="rtbs-plugin-content">
 
-                <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
-                    <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
-                    <h4>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h4>
-                <?php else: ?>
-                    <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
-                    <h4>
-                        Showing: <?= date('l dS F Y', strtotime($date)); ?></h4>
-                    <p>
-                        <?= $settings->content_first_page; ?>
-                    </p>
-                    <p><i class="fa fa-calendar"></i>
-                        <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
-                    </p>
-                <?php endif; ?>
+                     <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
+                        <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
+                        <h5>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
+                    <?php else: ?>
+                        <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
+                        <h5>
+                            Showing: <?= date('l dS F Y', strtotime($date)); ?></h5>
+                        <p>
+                            <?= $settings->content_first_page; ?>
+                        </p>
+                        <p><i class="fa fa-calendar"></i>
+                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
+                        </p>
+                    <?php endif; ?>
 
 
-                <div class="row rtbs-tours-step-<?= $hdStep; ?>">
-                    <?php
+                    <div class="row rtbs-tours-step-<?= $hdStep; ?>">
+                        <?php
 
-                        switch ($hdStep) {
-                            case self::STEP_DETAILS:
-                                $this->step_details($settings, $booking_service);
-                                break;
+                            switch ($hdStep) {
+                                case self::STEP_DETAILS:
+                                    $this->step_details($settings, $booking_service);
+                                    break;
 
-                            case self::STEP_CONFIRM:
-                                $this->step_confirm($settings);
-                                break;
+                                case self::STEP_CONFIRM:
+                                    $this->step_confirm($settings);
+                                    break;
 
-                            case self::STEP_AVAILABILITY:
-                            default:
-                                $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
-                                break;
-                        }
+                                case self::STEP_AVAILABILITY:
+                                default:
+                                    $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
+                                    break;
+                            }
 
-                    ?>
+                        ?>
+                    </div>
                 </div>
             </div>
 
@@ -904,35 +905,32 @@ class rtbs_plugin {
         <div class="row hidden-xs hidden-sm rtbs-plugin-navbar">
             <center>
 
-                <div
-                    class="col-md-3 col-sm-3 col-xs-3 <?= ($hdStep == self::STEP_AVAILABILITY) ? 'selected' : '' ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?= ($hdStep == self::STEP_AVAILABILITY) ? 'rtbs-plugin-navbar-active' : '' ?>">
                     <div class="col-md-2 rtbs-plugin-navbar-number">1</div>
                     <div class="col-md-10 rtbs-plugin-navbar-text">
-                        <p class="text-primary"><?php echo(!empty($page_titles[0]) ? $page_titles[0] : 'AVAILABILITY'); ?></p>
-
+                        <p><?php echo(!empty($page_titles[0]) ? $page_titles[0] : 'AVAILABILITY'); ?></p>
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_DETAILS ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_DETAILS ? 'rtbs-plugin-navbar-active' : ''); ?>">
                     <div class="col-md-2 rtbs-plugin-navbar-number">2</div>
                     <div class="col-md-10 rtbs-plugin-navbar-text">
-                        <p class="text-primary"><?php echo(!empty($page_titles[1]) ? $page_titles[1] : 'DETAILS'); ?></p>
+                        <p><?php echo(!empty($page_titles[1]) ? $page_titles[1] : 'DETAILS'); ?></p>
 
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_CONFIRM ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_CONFIRM ? 'rtbs-plugin-navbar-active' : ''); ?>">
                     <div class="col-md-2 rtbs-plugin-navbar-number">3</div>
                     <div class="col-md-10 rtbs-plugin-navbar-text">
-                        <p class="text-primary"><?php echo(!empty($page_titles[2]) ? $page_titles[2] : 'CONFIRM'); ?></p>
-
+                        <p><?php echo(!empty($page_titles[2]) ? $page_titles[2] : 'CONFIRM'); ?></p>
                     </div>
                 </div>
 
-                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_PAYMENT ? 'selected' : ''); ?>">
+                <div class="col-md-3 col-sm-3 col-xs-3 <?php echo($hdStep == self::STEP_PAYMENT ? 'rtbs-plugin-navbar-active' : ''); ?>">
                     <div class="col-md-2 rtbs-plugin-navbar-number">4</div>
                     <div class="col-md-10 rtbs-plugin-navbar-text">
-                        <p class="text-primary"><?php echo(!empty($page_titles[3]) ? $page_titles[3] : 'PAYMENT'); ?></p>
+                        <p><?php echo(!empty($page_titles[3]) ? $page_titles[3] : 'PAYMENT'); ?></p>
 
                     </div>
                 </div>
