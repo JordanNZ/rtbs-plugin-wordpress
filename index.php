@@ -655,8 +655,19 @@ class rtbs_plugin {
 
         $section_titles = explode(",", $settings->section_title);
         $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
-        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
-        $prices = $tours[0]->get_prices();
+//        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+        $sessions = $booking_service->get_sessions_and_advance_dates($settings->supplier_key, array($_POST['hd_tour_key']), $_POST['hd_date']);
+
+        /** @var Rtbs\ApiHelper\Models\Session[] $sessions */
+        $sessions = $sessions['sessions'];
+        $prices = [];
+
+        foreach ($sessions as $session) {
+            if ($session->get_datetime() == $_POST['hd_tour_date_time'] && $session->get_tour_key() == $_POST['hd_tour_key']) {
+                $prices = $session->get_prices();
+                break;
+            }
+        }
 
         $qty_range = range(0, $_POST['hd_remaining']);
     ?>
