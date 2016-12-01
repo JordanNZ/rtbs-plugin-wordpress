@@ -479,6 +479,10 @@ class rtbs_plugin {
                             errors.push('Phone is required');
                         }
 
+                        if (totalPax == 0) {
+                            errors.push("No prices selected");
+                        }
+
                         if (totalPax > numRemaining) {
                             errors.push("Only " + numRemaining + " places remaining");
                         }
