@@ -520,6 +520,7 @@ class rtbs_plugin {
 
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
+        $fields = array_key_exists('fields', $_POST) ? $_POST['fields'] : [];
 
         $total = 0;
         $price_qtys = [];
@@ -625,6 +626,11 @@ class rtbs_plugin {
                     <?php foreach ($price_qtys as $idx => $qty): ?>
                         <input type="hidden" name="price_qty[<?= $idx; ?>]" value="<?= $qty; ?>">
                     <?php endforeach; ?>
+
+                    <?php foreach ($fields as $name => $value): ?>
+                        <input type="hidden" name="fields[<?= htmlentities($name); ?>]" value="<?= htmlentities($value); ?>">
+                    <?php endforeach; ?>
+
                 </div>
 
                 <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
@@ -659,7 +665,11 @@ class rtbs_plugin {
 
         $section_titles = explode(",", $settings->section_title);
         $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
-//        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+
+        // only expecting 1 tour
+        $tour = $tours[0];
+
         $sessions = $booking_service->get_sessions_and_advance_dates($settings->supplier_key, array($_POST['hd_tour_key']), $_POST['hd_date']);
 
         /** @var Rtbs\ApiHelper\Models\Session[] $sessions */
@@ -769,6 +779,25 @@ class rtbs_plugin {
 
                                     </div>
                                 </div>
+                            <?php endif; ?>
+
+
+                            <?php if (count($tour->get_fields()) > 0): ?>
+
+                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Additional Info</p>
+
+                                <?php foreach ($tour->get_fields() as $idx => $field): ?>
+
+                                    <div class="form-group">
+                                        <label for="rtbsField<?= $idx; ?>" class="col-lg-4"><?= htmlentities($field->get_name()); ?></label>
+                                        <div class="col-lg-8">
+                                            <input id="rtbsField<?= $idx; ?>" class="form-control" type="text" name="fields[<?= htmlentities($field->get_name()); ?>]" value="">
+                                            <div class="help-block text-left small"><?= htmlentities($field->get_description()); ?></div>
+                                        </div>
+                                    </div>
+
+                                <?php endforeach; ?>
+
                             <?php endif; ?>
 
                             <div class="hidden_hd">
@@ -884,7 +913,7 @@ class rtbs_plugin {
         $booking->set_email($_POST['email']);
         $booking->set_phone($_POST['phone']);
 
-        // TODO call promo api
+        // TODO promo
         if (!empty($_POST['promo'])) {
             $booking->set_promo_key($_POST['promo']);
         }
@@ -896,6 +925,12 @@ class rtbs_plugin {
         // TODO pickup keys dont work yet
         if (!empty($_POST['pickup_key'])) {
             $booking->set_pickup_key($_POST['pickup_key']);
+        }
+
+        if (!empty($_POST['fields'])) {
+            foreach ($_POST['fields'] as $name => $value) {
+	            $booking->add_field_data($name, $value);
+            }
         }
 
         $price_qtys = $_POST['price_qty'];
