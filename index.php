@@ -925,6 +925,12 @@ class rtbs_plugin {
             $booking->set_pickup_key($_POST['pickup_key']);
         }
 
+	    if (!empty($_POST['fields'])) {
+		    foreach ($_POST['fields'] as $name => $value) {
+			    $booking->add_field_data($name, $value);
+		    }
+	    }
+
         $price_qtys = $_POST['price_qty'];
         foreach ($price_qtys as $key => $qty) {
             $booking->add_price_selection_keys($key, $qty);
