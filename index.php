@@ -64,7 +64,11 @@ class rtbs_plugin {
     }
 
     public function plugin_activate_init() {
-        $this->wpdb->insert('rtbs_settings', array('id' => 1));
+
+        $row = $this->select_settings();
+        if (!$row) {
+	        $this->wpdb->insert('rtbs_settings', array('id' => 1));
+        }
     }
 
 
