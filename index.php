@@ -38,7 +38,7 @@ class rtbs_plugin {
     public function plugin_activate() {
         $charset_collate = $this->wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE rtbs_settings (
+        $sql = "CREATE TABLE IF NOT EXISTS rtbs_settings (
                   `id` int(11) NOT NULL AUTO_INCREMENT,
                   `api_key` varchar(255) NOT NULL,
                   `password` varchar(255) NOT NULL,
@@ -55,7 +55,7 @@ class rtbs_plugin {
                   `is_show_remaining` int(11) NOT NULL,
                   `css_style` longtext NOT NULL,
                   PRIMARY KEY (`id`)
-                ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET={$charset_collate}";
+                ) ENGINE=InnoDB DEFAULT CHARSET={$charset_collate}";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
@@ -69,7 +69,7 @@ class rtbs_plugin {
 
 
     public function plugin_deactivate() {
-        $this->wpdb->query('DROP TABLE rtbs_settings');
+//        $this->wpdb->query('DROP TABLE rtbs_settings');
     }
 
     public function plugin_enqueue_scripts() {
@@ -528,6 +528,7 @@ class rtbs_plugin {
 
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
+	    $fields = array_key_exists('fields', $_POST) ? $_POST['fields'] : array();
 
         $total = 0;
         $price_qtys = array();
@@ -630,9 +631,14 @@ class rtbs_plugin {
                     <input type="hidden" name="hd_date" value="<?= htmlentities($_POST['hd_date']); ?>">
                     <input type="hidden" name="hd_tour_name" value="<?= htmlentities($_POST['hd_tour_name']); ?>">
                     <input type="hidden" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
+
                     <?php foreach ($price_qtys as $idx => $qty): ?>
                         <input type="hidden" name="price_qty[<?= $idx; ?>]" value="<?= $qty; ?>">
                     <?php endforeach; ?>
+
+	                <?php foreach ($fields as $name => $value): ?>
+                        <input type="hidden" name="fields[<?= htmlentities($name); ?>]" value="<?= htmlentities($value); ?>">
+	                <?php endforeach; ?>
                 </div>
 
                 <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
@@ -651,12 +657,27 @@ class rtbs_plugin {
      */
     private function step_details($settings, $booking_service) {
 
-        $section_titles = explode(",", $settings->section_title);
-        $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
-        $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
-        $prices = $tours[0]->get_prices();
+	    $section_titles = explode(",", $settings->section_title);
+	    $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
+	    $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
 
-        $qty_range = range(0, $_POST['hd_remaining']);
+	    // only expecting 1 tour
+	    $tour = $tours[0];
+
+	    $sessions = $booking_service->get_sessions_and_advance_dates($settings->supplier_key, array($_POST['hd_tour_key']), $_POST['hd_date']);
+
+	    /** @var Rtbs\ApiHelper\Models\Session[] $sessions */
+	    $sessions = $sessions['sessions'];
+	    $prices = array();
+
+	    foreach ($sessions as $session) {
+		    if ($session->get_datetime() == $_POST['hd_tour_date_time'] && $session->get_tour_key() == $_POST['hd_tour_key']) {
+			    $prices = $session->get_prices();
+			    break;
+		    }
+	    }
+
+	    $qty_range = range(0, $_POST['hd_remaining']);
     ?>
 
         <div class="col-md-12 rtbs-plugin-box">
@@ -752,6 +773,24 @@ class rtbs_plugin {
                                     </div>
                                 </div>
                             <?php endif; ?>
+
+	                        <?php if (count($tour->get_fields()) > 0): ?>
+
+                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Additional Info</p>
+
+		                        <?php foreach ($tour->get_fields() as $idx => $field): ?>
+
+                                    <div class="form-group">
+                                        <label for="rtbsField<?= $idx; ?>" class="col-lg-4"><?= htmlentities($field->get_name()); ?></label>
+                                        <div class="col-lg-8">
+                                            <input id="rtbsField<?= $idx; ?>" class="form-control" type="text" name="fields[<?= htmlentities($field->get_name()); ?>]" value="">
+                                            <div class="help-block text-left small"><?= htmlentities($field->get_description()); ?></div>
+                                        </div>
+                                    </div>
+
+		                        <?php endforeach; ?>
+
+	                        <?php endif; ?>
 
                             <div class="hidden_hd">
                                 <input type="hidden" name="hd_step" value="3">
