@@ -139,6 +139,17 @@ class rtbs_plugin {
 
             <h2>RTBS Settings</h2>
 
+	        <?php if (ini_get('allow_url_fopen') == 0): ?>
+                <div class="error settings-error notice">
+                    <p><strong>allow_url_fopen is disabled</strong></p>
+                    Please make sure the following setting is in your php.ini file <pre>allow_url_fopen=1</pre>
+
+                    <p>See the official php docs for further info on this setting.
+                        <a href="http://php.net/manual/en/filesystem.configuration.php">http://php.net/manual/en/filesystem.configuration.php</a>
+                    </p>
+                </div>
+	        <?php endif; ?>
+
             <?php if ($num_rows_updated === 1): ?>
 
                 <div id="setting-error-settings_updated" class="updated settings-error notice is-dismissible">
