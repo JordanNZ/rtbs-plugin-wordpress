@@ -80,12 +80,12 @@ class rtbs_plugin {
         wp_enqueue_script('jquery');
         wp_enqueue_script('jquery-ui-datepicker');
 
-        // TODO we should really prefix these with rtbs-wordpress-plugin
-        wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
-        wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
         if ($this->settings->is_include_bootstrap) {
             wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7.min.css', __FILE__));
         }
+
+        wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
+        wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
     }
 
 
