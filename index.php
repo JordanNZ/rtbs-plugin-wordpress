@@ -6,7 +6,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 1.2.0
+Version: 3.2.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -18,7 +18,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '1.2.0';
+    private $rtbslive_plugin_version = '3.2.0';
     private $wpdb;
 
     private $booking_service;
@@ -55,7 +55,7 @@ class rtbs_plugin {
             if ($row) {
                 $this->settings->api_key = $row->api_key;
                 $this->settings->supplier_key = $row->supplier_key;
-                $this->settings->is_test_mode = ($row->rtbs_domain == 'dev.rtbstraining.com');
+                $this->settings->is_test_mode = ($row->rtbs_domain == 'https://dev.rtbstraining.com');
                 $this->settings->is_show_promocode = $row->is_show_promocode;
                 $this->settings->url_success = $row->success_url;
                 $this->settings->html_terms = $row->terms_cond;
