@@ -1,10 +1,12 @@
 <?php
+use Rtbs\ApiHelper\Exceptions\ApiClientException;
+
 require_once("vendor/autoload.php");
 
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 1.1.0
+Version: 1.2.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -16,14 +18,18 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $jal_db_version = '1.1';
+    private $rtbslive_plugin_version = '1.2.0';
     private $wpdb;
+
+    private $booking_service;
+
+    /** @var rtbslive_settings $settings */
+    private $settings;
 
     public function __construct($wpdb) {
         $this->wpdb = $wpdb;
 
         register_activation_hook(__FILE__, array($this, 'plugin_activate'));
-        register_activation_hook(__FILE__, array($this, 'plugin_activate_init'));
         register_deactivation_hook(__FILE__, array($this, 'plugin_deactivate'));
 
         add_action('admin_menu', array($this, 'build_admin_menu'));
@@ -32,60 +38,43 @@ class rtbs_plugin {
         add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
         add_shortcode('rtbs_show_ticket', array($this, 'rtbs_show_ticket'));
 
+        require( plugin_dir_path( __FILE__ ) . 'rtbslive_settings.php');
+        $this->settings = rtbslive_settings::load();
     }
 
 
     public function plugin_activate() {
 
-        $installed_ver = get_option("jal_db_version");
+        $current_version = get_option("rtbslive_plugin_version");
 
-        if ($installed_ver != $this->jal_db_version) {
+        if ($current_version != $this->rtbslive_plugin_version) {
 
-            $charset_collate = $this->wpdb->get_charset_collate();
+            // convert table to options as of version 1.2.0
+            $row = $this->wpdb->get_row("SELECT * FROM rtbs_settings");
 
-            $table_name = $this->wpdb->prefix . 'rtbs_settings';
+            if ($row) {
+                $this->settings->api_key = $row->api_key;
+                $this->settings->supplier_key = $row->supplier_key;
+                $this->settings->is_test_mode = ($row->rtbs_domain == 'dev.rtbstraining.com');
+                $this->settings->is_show_promocode = $row->is_show_promocode;
+                $this->settings->url_success = $row->success_url;
+                $this->settings->html_terms = $row->terms_cond;
+                $this->settings->tour_keys = $row->tour_keys;
+                $this->settings->text_page_titles = $row->page_title;
+                $this->settings->text_section_titles = $row->section_title;
+                $this->settings->text_first_page_title = $row->title_first_page;
+                $this->settings->html_first_page_content = $row->content_first_page;
+                $this->settings->is_show_remaining = $row->is_show_remaining;
+                $this->settings->css_style = $row->css_style;
+                $this->settings->save();
 
-            $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
-                      id int(11) NOT NULL AUTO_INCREMENT,
-                      api_key varchar(255) NOT NULL,
-                      password varchar(255) NOT NULL,
-                      supplier_key varchar(255) NOT NULL,
-                      rtbs_domain varchar(255) NOT NULL,
-                      is_show_promocode int(11) NOT NULL,
-                      success_url varchar(255) NOT NULL,
-                      terms_cond text NOT NULL,
-                      tour_keys varchar(255) NOT NULL COMMENT 'separated by comma',
-                      page_title varchar(255) NOT NULL,
-                      section_title varchar(255) NOT NULL,
-                      title_first_page varchar(255) NOT NULL,
-                      content_first_page text NOT NULL,
-                      is_show_remaining tinyint NOT NULL,
-                      css_style longtext NOT NULL,
-                      is_include_bootstrap tinyint NOT NULL,
-                      
-                      PRIMARY KEY (`id`)
-                    ) ENGINE=InnoDB DEFAULT CHARSET={$charset_collate}";
+                $this->wpdb->query('DROP TABLE rtbs_settings');
+            }
 
-            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-            dbDelta($sql);
-
-            update_option('jal_db_version', $this->jal_db_version);
+            update_option('rtbslive_plugin_version', $this->rtbslive_plugin_version);
         }
     }
 
-
-    public function plugin_activate_init() {
-
-        $row = $this->select_settings();
-        if (!$row) {
-	        $this->wpdb->insert('rtbs_settings', array('id' => 1));
-        }
-    }
-
-
-    public function plugin_deactivate() {
-//        $this->wpdb->query('DROP TABLE rtbs_settings');
-    }
 
     public function plugin_enqueue_scripts() {
         wp_enqueue_script('jquery');
@@ -94,60 +83,51 @@ class rtbs_plugin {
         // TODO we should really prefix these with rtbs-wordpress-plugin
         wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
         wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
-
-
-        wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
+        if ($this->settings->is_include_bootstrap) {
+            wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7.min.css', __FILE__));
+        }
     }
+
 
     public function build_admin_menu() {
         add_menu_page('RTBS', 'RTBS', '', __FILE__, 'moveing_company', plugins_url('img/settings.png', __FILE__));
-        add_submenu_page(__FILE__, 'Shortcode', 'Shortcode', 'administrator', 'shortcode-rtbs-booking', array($this, 'rtbs_admin_shortcode'));
-        add_submenu_page(__FILE__, 'CSS Style', 'CSS Style', 'administrator', 'css-style-rtbs-booking', array($this, 'rtbs_admin_css_style'));
         add_submenu_page(__FILE__, 'Settings', 'Settings', 'administrator', 'adminSettings', array($this, 'rtbs_admin_settings'));
+        add_submenu_page(__FILE__, 'CSS Style', 'CSS Style', 'administrator', 'css-style-rtbs-booking', array($this, 'rtbs_admin_css_style'));
+        add_submenu_page(__FILE__, 'Shortcodes', 'Shortcodes', 'administrator', 'shortcode-rtbs-booking', array($this, 'rtbs_admin_shortcodes'));
     }
 
-    private function select_settings() {
-        return $this->wpdb->get_row("SELECT * FROM rtbs_settings");
+
+    private function host() {
+        return ($this->settings->is_test_mode) ? 'https://dev.rtbstraining.com' : 'https://rtbslive.com';
     }
+
+
+    private function get_booking_service_connection()
+    {
+        if (!$this->booking_service && $this->settings->api_key) {
+            $credentials = array(
+                'host' => $this->host(),
+                'key' => $this->settings->api_key,
+            );
+
+            $this->booking_service = new Rtbs\ApiHelper\BookingServiceImpl($credentials);
+        }
+
+        return $this->booking_service;
+    }
+
+
 
 
     public function rtbs_admin_settings() {
-        $num_rows_updated = 0;
+        $is_saved = false;
+
         if (isset($_POST['save_set'])) {
-            $num_rows_updated = $this->wpdb->update(
-                'rtbs_settings',
-                array(
-                    'api_key' => $_POST['api_key'],
-                    'supplier_key' => $_POST['supplier_key'],
-                    'rtbs_domain' => $_POST['rtbs_domain'],
-                    'is_show_promocode' => (isset($_POST['is_show_promocode'])) ? 1 : 0,
-                    'success_url' => $_POST['success_url'],
-                    'page_title' => $_POST['page_title'],
-                    'section_title' => $_POST['section_title'],
-                    'title_first_page' => $_POST['title_first_page'],
-                    'content_first_page' => $_POST['content_first_page'],
-                    'terms_cond' => $_POST['terms_cond'],
-                    'is_show_remaining' => (isset($_POST['is_show_remaining'])) ? 1 : 0,
-                    'is_include_bootstrap' => (isset($_POST['is_include_bootstrap'])) ? 1 : 0,
-                ),
-                array('id' => 1),
-                array(
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%d',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%d',
-                ),
-                array('%d')
-            );
+            $this->settings->fill($_POST);
+            $this->settings->save();
+            $is_saved = true;
         }
-        $settings = $this->select_settings();
+
         ?>
 
         <div class='wrap'>
@@ -165,8 +145,7 @@ class rtbs_plugin {
                 </div>
 	        <?php endif; ?>
 
-            <?php if ($num_rows_updated === 1): ?>
-
+            <?php if ($is_saved): ?>
                 <div id="setting-error-settings_updated" class="updated settings-error notice is-dismissible">
                     <p><strong>Settings saved.</strong></p>
                     <button type="button" class="notice-dismiss"><span
@@ -178,91 +157,93 @@ class rtbs_plugin {
 
                 <table class="form-table">
                     <tbody>
+
                     <tr>
                         <th scope="row"><label for="api_key">API Key</label></th>
-                        <td><input name="api_key" type="text" id="api_key" value="<?= $settings->api_key; ?>" class="regular-text">
-                            <p class="description">Your API key.</p>
-                        </td>
+                        <td><input name="api_key" type="text" id="api_key" value="<?= $this->settings->api_key; ?>" class="regular-text"></td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="supplier_key">Supplier Key</label></th>
-                        <td><input name="supplier_key" type="text" id="supplier_key" value="<?= $settings->supplier_key; ?>" class="regular-text">
-                            <p class="description">Set your Supplier key.</p>
+                        <td><input name="supplier_key" type="text" id="supplier_key" value="<?= $this->settings->supplier_key; ?>" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><label for="is_test_mode">Test Mode</label></th>
+                        <td>
+                            <input type="hidden" name="is_test_mode" value="0">
+                            <input name="is_test_mode" type="checkbox" id="is_test_mode" <?= ($this->settings->is_test_mode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
+                            <p class="description">Use testing server dev.rtbstraining.com, no live bookings will be created</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="rtbs_domain">RTBS Domain</label></th>
-                        <td><input name="rtbs_domain" type="text" id="rtbs_domain" value="<?= (!empty($settings->rtbs_domain)) ? $settings->rtbs_domain : 'https://rtbslive.com'; ?>" class="regular-text">
-                            <p class="description">Set your RTBS domain.</p>
+                        <th scope="row"><label for="is_include_bootstrap">Include Bootstrap CSS</label></th>
+                        <td>
+                            <input type="hidden" name="is_include_bootstrap" value="0">
+                            <input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($this->settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
+                            <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="is_show_promocode">Show Promo Code</label></th>
-                        <td><input name="is_show_promocode" type="checkbox" id="is_show_promocode" <?= ($settings->is_show_promocode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
-                            <p class="description">Show/Hide</p>
+                        <td>
+                            <input type="hidden" name="is_show_promocode" value="0">
+                            <input name="is_show_promocode" type="checkbox" id="is_show_promocode" <?= ($this->settings->is_show_promocode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
+                            <p class="description">Allow customer to use Promo Codes for bookings</p>
                         </td>
                     </tr>
 
                     <tr>
                         <th scope="row"><label for="is_show_remaining">Show Remaining</label></th>
-                        <td><input name="is_show_remaining" type="checkbox" id="is_show_remaining" class="regular-checkbox" <?= ($settings->is_show_remaining) ? 'checked' : '' ?>  value="1">
-                            <p class="description">Show/Hide</p>
+                        <td>
+                            <input type="hidden" name="is_show_remaining" value="0">
+                            <input name="is_show_remaining" type="checkbox" id="is_show_remaining" class="regular-checkbox" <?= ($this->settings->is_show_remaining) ? 'checked' : '' ?>  value="1">
+                            <p class="description">Show number of seats remaining next to each tour</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="success_url">Success URI</label></th>
-                        <td><input name="success_url" type="text" id="success_url" value="<?= $settings->success_url; ?>" class="regular-text">
+                        <th scope="row"><label for="url_success">Success URI</label></th>
+                        <td><input name="url_success" type="text" id="url_success" value="<?= $this->settings->url_success; ?>" class="regular-text">
                             <p class="description">Return or Success url ( For display ticket you must put [rtbs_show_ticket] shortcode to your return url page ).</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="page_title">Page Title</label></th>
-                        <td><input name="page_title" type="text" id="page_title" value="<?= $settings->page_title; ?>" class="regular-text">
-                            <p class="description">Your custom progress bar page title here, Separated by comma (Default: AVAILABILITY,DETAILS,CONFIRM,PAYMENT)</p>
+                        <th scope="row"><label for="text_page_titles">Page Titles</label></th>
+                        <td><input name="text_page_titles" type="text" id="text_page_titles" value="<?= $this->settings->text_page_titles; ?>" class="regular-text">
+                            <p class="description">Custom progress bar page titles (comma separated)</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="section_title">Section Title</label></th>
-                        <td><input name="section_title" type="text" id="section_title" value="<?= $settings->section_title; ?>" class="regular-text">
-                            <p class="description">Your custom progress bar section title here, Separated by comma (Default: Number of People,Your Details,Pickup).</p>
+                        <th scope="row"><label for="text_section_titles">Section Titles</label></th>
+                        <td><input name="text_section_titles" type="text" id="text_section_titles" value="<?= $this->settings->text_section_titles; ?>" class="regular-text">
+                            <p class="description">Custom progress bar section title (comma separated).</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="title_first_page">Title First Page</label></th>
-                        <td><input name="title_first_page" type="text" id="title_first_page" value="<?= $settings->title_first_page; ?>" class="regular-text">
+                        <th scope="row"><label for="text_first_page_title">Title First Page</label></th>
+                        <td><input name="text_first_page_title" type="text" id="text_first_page_title" value="<?= $this->settings->text_first_page_title; ?>" class="regular-text">
                             <p class="description">Your first page title.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><label for="content_first_page">Content First Page</label></th>
-                        <td><?php wp_editor($settings->content_first_page, 'content_first_page', $options = array('media_buttons' => false)); ?>
-                            <p class="description">Your first page content.</p>
-                        </td>
+                        <th scope="row"><label for="html_first_page_content">First Page Content</label></th>
+                        <td><?php wp_editor($this->settings->html_first_page_content, 'html_first_page_content', $options = array('media_buttons' => false)); ?></td>
                     </tr>
 
 
                     <tr>
-                        <th scope="row"><label for="terms_cond">Terms & Conditions</label></th>
+                        <th scope="row"><label for="html_terms">Terms &amp; Conditions</label></th>
                         <td>
-                            <?php wp_editor($settings->terms_cond, 'terms_cond', $options = array('media_buttons' => false)); ?>
+                            <?php wp_editor($this->settings->html_terms, 'html_terms', $options = array('media_buttons' => false)); ?>
                         </td>
                     </tr>
-
-                    <tr>
-                        <th scope="row"><label for="is_include_bootstrap">Include Bootstrap CSS </label></th>
-                        <td><input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
-                            <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
-                        </td>
-                    </tr>
-
 
                     </tbody>
                 </table>
@@ -277,17 +258,42 @@ class rtbs_plugin {
         <?php
     }
 
-    public function rtbs_admin_shortcode() {
-        echo '<h1>RTBS Booking Shortcode</h1>';
-        echo '<div class="card pressthis">';
-        echo '<h2>Shortcode for RTBS Booking Plugin</h2>';
-        echo '<code>[rtbs_plugin]</code>';
-        echo '<h2>Shortcode for RTBS Booking Plugin with tour_key</h2>';
-        echo '<code>[rtbs_plugin tour_key="tour_key1,tour_key2"]</code>';
-        echo '<p class="description">Seperated by comma.</p>';
-        echo '<h2>Shortcode for display ticket to your return url page</h2>';
-        echo '<code>[rtbs_show_ticket]</code>';
-        echo '</div>';
+    public function rtbs_admin_shortcodes() {
+
+        $tours = array();
+
+        $booking_service = $this->get_booking_service_connection();
+        if ($booking_service) {
+            $supplier = $booking_service->get_supplier($this->settings->supplier_key);
+            $tours = $supplier->get_tours();
+        }
+
+        ?>
+        <div>
+            <h1>RTBS Booking Shortcodes</h1>
+
+            <div class="card pressthis">
+                <h2>Shortcode for All Tours</h2>
+                <code>[rtbs_plugin]</code>
+        <?php
+            foreach ($tours as $tour) {
+                echo '<h2>Shortcode for ' . htmlentities($tour->get_name()) . '</h2>';
+                echo '<code>[rtbs_plugin tour_key="' . htmlentities($tour->get_tour_key()) . '"]</code>';
+            }
+        ?>
+
+                <h2>Shortcode for Multiple Tours</h2>
+                <code>[rtbs_plugin tour_key="tour_key1,tour_key2"]</code>
+                <p class="description">Replace tour_key1,tour_key2 with tour keys (comma separated).</p>
+
+                <h2>Shortcode for display ticket to your return url page</h2>
+                <code>[rtbs_show_ticket]</code>
+            </div>
+
+
+
+        </div>
+        <?php
     }
 
 
@@ -295,20 +301,9 @@ class rtbs_plugin {
         $num_rows_updated = 0;
 
         if (isset($_POST['save_set'])) {
-            $num_rows_updated = $this->wpdb->update(
-                'rtbs_settings',
-                array(
-                    'css_style' => $_POST['css_style']
-                ),
-                array('id' => 1),
-                array(
-                    '%s'
-                ),
-                array('%d')
-            );
+            $this->settings->fill($_POST);
+            $this->settings->save();
         }
-
-        $settings = $this->select_settings();
 
         ?>
         <div class="wrap">
@@ -329,8 +324,8 @@ class rtbs_plugin {
                     <tr>
                         <th scope="row"><label for="css_style">CSS Style</label></th>
                         <td>
-                            <textarea name="css_style" rows="30" cols="50" id="css_style" class="large-text code"><?php echo(!empty($settings->css_style) ? $settings->css_style : ''); ?></textarea>
-                            <p class="description">Write your CSS Styles for overwrite the default style. (Optional).</p>
+                            <textarea name="css_style" rows="30" cols="50" id="css_style" class="large-text code"><?= $this->settings->css_style; ?></textarea>
+                            <p class="description">Override the default css styles. (Optional).</p>
                         </td>
                     </tr>
                     </tbody>
@@ -346,40 +341,50 @@ class rtbs_plugin {
     }
 
 
-    public function rtbs_plugin_main($atts) {
+    public function display_error($message) {
+        echo '<div style="background: color: yellow; border: 2px solid red; padding: 10px;"><h2>RTBS Booking Plugin Error</h2><span>' . htmlentities($message) . '</span></div>';
+    }
 
+
+    public function rtbs_plugin_main($atts)
+    {
+        // wrap output in api exception handler
+        try {
+            $this->render_plugin_clientfacing($atts);
+        } catch (ApiClientException $ex) {
+            $this->display_error($ex->getMessage());
+        }
+    }
+
+
+    private function render_plugin_clientfacing($atts) {
         date_default_timezone_set('Pacific/Auckland');
+
+        $booking_service = $this->get_booking_service_connection();
+        $booking_service->get_supplier($this->settings->supplier_key);
 
         // shortcode with attribute or parameter
         if (isset($atts['tour_key'])) {
+            if ($atts['tour_key']  == 'tour_key1,tour_key2') {
+                $this->display_error('Please replace "tour_key1,tour_key2" in the shortcode, with actual tour keys');
+                return;
+            }
+
             $shortcode_tour_keys = explode(',', $atts['tour_key']);
         } else {
             $shortcode_tour_keys = null;
         }
 
-        $settings = $this->select_settings();
-
-        if (empty($settings->rtbs_domain)) {
-            die('Error: RTBS Domain Not Set');
-        }
-
-        if (empty($settings->supplier_key)) {
+        if (empty($this->settings->supplier_key)) {
             die('Error: Supplier Key Not Set');
         }
 
         $hdStep = (isset($_POST['hd_step'])) ? $_POST['hd_step'] : self::STEP_AVAILABILITY;
         $date = (isset($_REQUEST['tdate'])) ? $_REQUEST['tdate'] : date('Y-m-d', strtotime("+1 day"));
 
-        $credentials = array(
-            'host' => $settings->rtbs_domain,
-            'key' => $settings->api_key,
-        );
-
-        $booking_service = new Rtbs\ApiHelper\BookingServiceImpl($credentials);
-
         // payment redirects, so do that first
         if ($hdStep == self::STEP_PAYMENT) {
-            $this->step_payment($settings, $booking_service);
+            $this->step_payment($booking_service);
         }
 
         ?>
@@ -388,12 +393,12 @@ class rtbs_plugin {
             <a name="rtbs-booking"></a>
             <!-- CSS Styles Custom --->
             <style>
-                <?= $settings->css_style; ?>
+                <?= $this->settings->css_style; ?>
             </style>
 
             <div class="container rtbs-container">
 
-                <?php $this->render_navbar($settings, $hdStep); ?>
+                <?php $this->render_navbar($hdStep); ?>
 
                 <div class="rtbs-plugin-content">
 
@@ -401,11 +406,11 @@ class rtbs_plugin {
                         <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
                         <h5>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
                     <?php else: ?>
-                        <h2 class="title-first-page"><?= htmlentities($settings->title_first_page); ?></h2>
+                        <h2 class="title-first-page"><?= htmlentities($this->settings->text_first_page_title); ?></h2>
                         <h5>
                             Showing: <?= date('l dS F Y', strtotime($date)); ?></h5>
                         <p>
-                            <?= $settings->content_first_page; ?>
+                            <?= $this->settings->html_first_page_content; ?>
                         </p>
                         <p><i class="fa fa-calendar"></i>
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
@@ -418,16 +423,16 @@ class rtbs_plugin {
 
                             switch ($hdStep) {
                                 case self::STEP_DETAILS:
-                                    $this->step_details($settings, $booking_service);
+                                    $this->step_details($booking_service);
                                     break;
 
                                 case self::STEP_CONFIRM:
-                                    $this->step_confirm($settings);
+                                    $this->step_confirm();
                                     break;
 
                                 case self::STEP_AVAILABILITY:
                                 default:
-                                    $this->step_availability($settings, $booking_service, $shortcode_tour_keys, $date);
+                                    $this->step_availability($booking_service, $shortcode_tour_keys, $date);
                                     break;
                             }
 
@@ -556,16 +561,13 @@ class rtbs_plugin {
 
 
     public function rtbs_show_ticket() {
-        $settings = $this->select_settings();
-        $ticket_url = $settings->rtbs_domain . "/api/ticket?token=" . $_REQUEST['token'];
+        $settings = rtbslive_settings::load();
+        $ticket_url = $settings->host . "/api/ticket?token=" . $_REQUEST['token'];
         return '<p><iframe src="' . $ticket_url . '" frameborder="0" style="overflow:hidden;height:1000px;width:100%" height="100%" width="100%"></iframe></p>';
     }
 
 
-    /**
-     * @param stdClass $settings
-     */
-    private function step_confirm($settings) {
+    private function step_confirm() {
 
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
@@ -658,7 +660,7 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
-                            <p class="terms_cond"><?= $settings->terms_cond; ?></p>
+                            <p class="tandc"><?= $this->settings->html_terms; ?></p>
                             <input type="checkbox" name="tandc" id="rtbs-checkbox-tandc" value="0"> I have read and accept the
                             Terms and Conditions.<br/><br/>
                         </td>
@@ -693,19 +695,18 @@ class rtbs_plugin {
 
 
     /**
-     * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      */
-    private function step_details($settings, $booking_service) {
+    private function step_details($booking_service) {
 
-	    $section_titles = explode(",", $settings->section_title);
+	    $section_titles = explode(",", $this->settings->text_section_titles);
 	    $pickups = $booking_service->get_pickups($_POST['hd_tour_key']);
 	    $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
 
 	    // only expecting 1 tour
 	    $tour = $tours[0];
 
-	    $sessions = $booking_service->get_sessions_and_advance_dates($settings->supplier_key, array($_POST['hd_tour_key']), $_POST['hd_date']);
+	    $sessions = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, array($_POST['hd_tour_key']), $_POST['hd_date']);
 
 	    /** @var Rtbs\ApiHelper\Models\Session[] $sessions */
 	    $sessions = $sessions['sessions'];
@@ -789,7 +790,7 @@ class rtbs_plugin {
                             </div>
 
 
-                            <?php if ($settings->is_show_promocode): ?>
+                            <?php if ($this->settings->is_show_promocode): ?>
                                 <div class="form-group">
                                     <label for="rtbsPromo" class="col-lg-3">Promo Code</label>
                                     <div class="col-lg-9">
@@ -865,14 +866,13 @@ class rtbs_plugin {
 
 
     /**
-     * @param $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      * @param array $shortcode_tour_keys
      * @param string $date
      */
-    private function step_availability($settings, $booking_service, $shortcode_tour_keys, $date) {
+    private function step_availability($booking_service, $shortcode_tour_keys, $date) {
 
-        $supplier = $booking_service->get_supplier($settings->supplier_key);
+        $supplier = $booking_service->get_supplier($this->settings->supplier_key);
 
         if ($shortcode_tour_keys) {
             $tour_keys = $shortcode_tour_keys;
@@ -907,14 +907,14 @@ class rtbs_plugin {
                 ?>
                 <div class="col-md-12">
                     <div class="panel panel-default">
-                        <div class="panel-heading"><h4><?= htmlentities($tour->get_name()); ?></h4></div>
+                        <div class="panel-heading"><h4><?= htmlentities($tour->get_name()); ?> <?php if ($this->settings->is_test_mode): ?><span style="background: red; padding: 2px; color: yellow;">TEST MODE IS ON</span><?php endif; ?></h4></div>
                         <div class="panel-body">
 
                             <?php foreach ($sessions as $session): ?>
 
                                 <form action="#rtbs-booking" method="post">
                                     <p>
-                                        <?= date('h:i a', strtotime($session->get_datetime())) . ($settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
+                                        <?= date('h:i a', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
                                         <input type="hidden" name="hd_step" value="2">
                                         <input type="hidden" name="hd_remaining" value="<?= $session->get_remaining(); ?>"/>
                                         <input type="hidden" name="hd_tour_key" value="<?= $tour->get_tour_key(); ?>">
@@ -935,10 +935,9 @@ class rtbs_plugin {
     }
 
     /**
-     * @param stdClass $settings
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
      */
-    private function step_payment($settings, $booking_service) {
+    private function step_payment($booking_service) {
 
         $booking = new Rtbs\ApiHelper\Models\Booking();
         $booking->set_tour_key($_POST['hd_tour_key']);
@@ -953,8 +952,8 @@ class rtbs_plugin {
             $booking->set_promo_key($_POST['promo']);
         }
 
-        if (!empty($settings->success_url)) {
-            $booking->set_return_url($settings->success_url);
+        if (!empty($this->settings->url_success)) {
+            $booking->set_return_url($this->settings->url_success);
         }
 
         // TODO pickup keys dont work yet
@@ -984,8 +983,8 @@ class rtbs_plugin {
     }
 
 
-    private function render_navbar($settings, $hdStep) {
-        $page_titles = explode(",", $settings->page_title);
+    private function render_navbar($hdStep) {
+        $page_titles = explode(",", $this->settings->text_page_titles);
 
         ?>
         <div class="row hidden-xs hidden-sm rtbs-plugin-navbar">
