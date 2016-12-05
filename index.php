@@ -4,7 +4,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 1.0
+Version: 1.1.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -16,7 +16,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $jal_db_version = '1.0';
+    private $jal_db_version = '1.1';
     private $wpdb;
 
     public function __construct($wpdb) {
@@ -36,32 +36,43 @@ class rtbs_plugin {
 
 
     public function plugin_activate() {
-        $charset_collate = $this->wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE IF NOT EXISTS rtbs_settings (
-                  `id` int(11) NOT NULL AUTO_INCREMENT,
-                  `api_key` varchar(255) NOT NULL,
-                  `password` varchar(255) NOT NULL,
-                  `supplier_key` varchar(255) NOT NULL,
-                  `rtbs_domain` varchar(255) NOT NULL,
-                  `is_show_promocode` int(11) NOT NULL,
-                  `success_url` varchar(255) NOT NULL,
-                  `terms_cond` text NOT NULL,
-                  `tour_keys` varchar(255) NOT NULL COMMENT 'separated by comma',
-                  `page_title` varchar(255) NOT NULL,
-                  `section_title` varchar(255) NOT NULL,
-                  `title_first_page` varchar(255) NOT NULL,
-                  `content_first_page` text NOT NULL,
-                  `is_show_remaining` int(11) NOT NULL,
-                  `css_style` longtext NOT NULL,
-                  PRIMARY KEY (`id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET={$charset_collate}";
+        $installed_ver = get_option("jal_db_version");
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        if ($installed_ver != $this->jal_db_version) {
 
-        add_option('jal_db_version', $this->jal_db_version);
+            $charset_collate = $this->wpdb->get_charset_collate();
+
+            $table_name = $this->wpdb->prefix . 'rtbs_settings';
+
+            $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
+                      id int(11) NOT NULL AUTO_INCREMENT,
+                      api_key varchar(255) NOT NULL,
+                      password varchar(255) NOT NULL,
+                      supplier_key varchar(255) NOT NULL,
+                      rtbs_domain varchar(255) NOT NULL,
+                      is_show_promocode int(11) NOT NULL,
+                      success_url varchar(255) NOT NULL,
+                      terms_cond text NOT NULL,
+                      tour_keys varchar(255) NOT NULL COMMENT 'separated by comma',
+                      page_title varchar(255) NOT NULL,
+                      section_title varchar(255) NOT NULL,
+                      title_first_page varchar(255) NOT NULL,
+                      content_first_page text NOT NULL,
+                      is_show_remaining tinyint NOT NULL,
+                      css_style longtext NOT NULL,
+                      is_include_bootstrap tinyint NOT NULL,
+                      
+                      PRIMARY KEY (`id`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET={$charset_collate}";
+
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+
+            update_option('jal_db_version', $this->jal_db_version);
+        }
     }
+
 
     public function plugin_activate_init() {
 
@@ -82,6 +93,9 @@ class rtbs_plugin {
 
         // TODO we should really prefix these with rtbs-wordpress-plugin
         wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
+        wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
+
+
         wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
     }
 
@@ -114,6 +128,7 @@ class rtbs_plugin {
                     'content_first_page' => $_POST['content_first_page'],
                     'terms_cond' => $_POST['terms_cond'],
                     'is_show_remaining' => (isset($_POST['is_show_remaining'])) ? 1 : 0,
+                    'is_include_bootstrap' => (isset($_POST['is_include_bootstrap'])) ? 1 : 0,
                 ),
                 array('id' => 1),
                 array(
@@ -127,7 +142,7 @@ class rtbs_plugin {
                     '%s',
                     '%s',
                     '%s',
-                    '%d'
+                    '%d',
                 ),
                 array('%d')
             );
@@ -238,6 +253,13 @@ class rtbs_plugin {
                         <th scope="row"><label for="terms_cond">Terms & Conditions</label></th>
                         <td>
                             <?php wp_editor($settings->terms_cond, 'terms_cond', $options = array('media_buttons' => false)); ?>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><label for="is_include_bootstrap">Include Bootstrap CSS </label></th>
+                        <td><input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
+                            <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
                         </td>
                     </tr>
 
