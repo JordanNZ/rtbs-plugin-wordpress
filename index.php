@@ -350,14 +350,14 @@ class rtbs_plugin {
     {
         // wrap output in api exception handler
         try {
-            $this->render_plugin_clientfacing($atts);
+            $this->render_plugin_frontend($atts);
         } catch (ApiClientException $ex) {
             $this->display_error($ex->getMessage());
         }
     }
 
 
-    private function render_plugin_clientfacing($atts) {
+    private function render_plugin_frontend($atts) {
         date_default_timezone_set('Pacific/Auckland');
 
         $booking_service = $this->get_booking_service_connection();
@@ -561,14 +561,12 @@ class rtbs_plugin {
 
 
     public function rtbs_show_ticket() {
-        $settings = rtbslive_settings::load();
-        $ticket_url = $settings->host . "/api/ticket?token=" . $_REQUEST['token'];
+        $ticket_url = $this->host() . "/api/ticket?token=" . $_REQUEST['token'];
         return '<p><iframe src="' . $ticket_url . '" frameborder="0" style="overflow:hidden;height:1000px;width:100%" height="100%" width="100%"></iframe></p>';
     }
 
 
     private function step_confirm() {
-
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
 	    $fields = array_key_exists('fields', $_POST) ? $_POST['fields'] : array();
@@ -682,6 +680,8 @@ class rtbs_plugin {
 	                <?php foreach ($fields as $name => $value): ?>
                         <input type="hidden" name="fields[<?= htmlentities($name); ?>]" value="<?= htmlentities($value); ?>">
 	                <?php endforeach; ?>
+
+                    <input type="hidden" name="pickup_key" value="<?= isset($_POST['pickup_key']) ? $_POST['pickup_key'] : ''; ?>">
                 </div>
 
                 <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
@@ -799,40 +799,40 @@ class rtbs_plugin {
                                 </div>
                             <?php endif; ?>
 
-                            <?php if (count($pickups) > 0): ?>
-                                <p class="rtbs-plugin-section-header">Pickup </p>
+                            <?php if (count($pickups) > 0 || count($tour->get_fields()) > 0): ?>
+                                <p class="rtbs-plugin-section-header">Additional Info </p>
 
-                                <div class="form-group">
-
-                                    <div class="col-lg-12">
-                                        <select class="form-control" name="pickup_key">
-                                            <option value="">Select a Pickup Point</option>
-                                            <?php foreach ($pickups as $pkup): ?>
-                                                <option value="<?= $pkup->get_pickup_key(); ?>"><?= ($pkup->get_name() == '' ? 'No Pickup available' : $pkup->get_name() . ' - ' . $pkup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pkup->get_minutes() . ' minutes'))); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-	                        <?php if (count($tour->get_fields()) > 0): ?>
-
-                                <p style="font-size: 18px;background-color: #ecf0f1;padding: 10px;">Additional Info</p>
-
-		                        <?php foreach ($tour->get_fields() as $idx => $field): ?>
-
+                                <?php if (count($pickups) > 0): ?>
                                     <div class="form-group">
-                                        <label for="rtbsField<?= $idx; ?>" class="col-lg-4"><?= htmlentities($field->get_name()); ?></label>
-                                        <div class="col-lg-8">
-                                            <input id="rtbsField<?= $idx; ?>" class="form-control" type="text" name="fields[<?= htmlentities($field->get_name()); ?>]" value="">
-                                            <div class="help-block text-left small"><?= htmlentities($field->get_description()); ?></div>
+
+                                        <div class="col-lg-12">
+                                            <select class="form-control" name="pickup_key">
+                                                <option value="">Select a Pickup Point</option>
+                                                <?php foreach ($pickups as $pickup): ?>
+                                                    <option value="<?= $pickup->get_pickup_key(); ?>"><?= ($pickup->get_name() == '' ? 'No Pickup available' : $pickup->get_name() . ' - ' . $pickup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pickup->get_minutes() . ' minutes'))); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+
                                         </div>
                                     </div>
+                                <?php endif; ?>
 
-		                        <?php endforeach; ?>
+                                <?php if (count($tour->get_fields()) > 0): ?>
 
-	                        <?php endif; ?>
+                                    <?php foreach ($tour->get_fields() as $idx => $field): ?>
+
+                                        <div class="form-group">
+                                            <label for="rtbsField<?= $idx; ?>" class="col-lg-4"><?= htmlentities($field->get_name()); ?></label>
+                                            <div class="col-lg-8">
+                                                <input id="rtbsField<?= $idx; ?>" class="form-control" type="text" name="fields[<?= htmlentities($field->get_name()); ?>]" value="">
+                                                <div class="help-block text-left small"><?= htmlentities($field->get_description()); ?></div>
+                                            </div>
+                                        </div>
+
+                                    <?php endforeach; ?>
+
+                                <?php endif; ?>
+                            <?php endif; ?>
 
                             <div class="hidden_hd">
                                 <input type="hidden" name="hd_step" value="3">
@@ -956,7 +956,6 @@ class rtbs_plugin {
             $booking->set_return_url($this->settings->url_success);
         }
 
-        // TODO pickup keys dont work yet
         if (!empty($_POST['pickup_key'])) {
             $booking->set_pickup_key($_POST['pickup_key']);
         }
