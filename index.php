@@ -262,10 +262,15 @@ class rtbs_plugin {
 
         $tours = array();
 
-        $booking_service = $this->get_booking_service_connection();
-        if ($booking_service) {
-            $supplier = $booking_service->get_supplier($this->settings->supplier_key);
-            $tours = $supplier->get_tours();
+        try {
+            $booking_service = $this->get_booking_service_connection();
+            if ($booking_service) {
+                $supplier = $booking_service->get_supplier($this->settings->supplier_key);
+                $tours = $supplier->get_tours();
+            }
+        } catch (ApiClientException $ex) {
+            $this->display_error($ex->getMessage());
+            return;
         }
 
         ?>
@@ -408,9 +413,9 @@ class rtbs_plugin {
                     <?php else: ?>
                         <h2 class="title-first-page"><?= htmlentities($this->settings->text_first_page_title); ?></h2>
                         <h5>
-                            Showing: <?= date('l dS F Y', strtotime($date)); ?></h5>
+                            Showing: <?= date('D jS F Y', strtotime($date)); ?></h5>
                         <p>
-                            <?= $this->settings->html_first_page_content; ?>
+                            <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
                         <p><i class="fa fa-calendar"></i>
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
@@ -658,7 +663,7 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
-                            <p class="tandc"><?= $this->settings->html_terms; ?></p>
+                            <p class="tandc"><?= nl2br($this->settings->html_terms); ?></p>
                             <input type="checkbox" name="tandc" id="rtbs-checkbox-tandc" value="0"> I have read and accept the
                             Terms and Conditions.<br/><br/>
                         </td>

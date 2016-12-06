@@ -40,7 +40,7 @@ class rtbslive_settings
 
         foreach ($vars as $var_name => $val) {
             if (array_key_exists($var_name, $data)) {
-                $this->{$var_name} = $data[$var_name];
+                $this->{$var_name} = stripslashes($data[$var_name]);
             }
         }
     }
