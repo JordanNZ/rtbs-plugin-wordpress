@@ -205,6 +205,15 @@ class rtbs_plugin {
                     </tr>
 
                     <tr>
+                        <th scope="row"><label for="is_show_comments">Show Comments</label></th>
+                        <td>
+                            <input type="hidden" name="is_show_comments" value="0">
+                            <input name="is_show_comments" type="checkbox" id="is_show_comments" class="regular-checkbox" <?= ($this->settings->is_show_comments) ? 'checked' : '' ?>  value="1">
+                            <p class="description">Show Comments field for customer.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
                         <th scope="row"><label for="url_success">Success URI</label></th>
                         <td><input name="url_success" type="text" id="url_success" value="<?= $this->settings->url_success; ?>" class="regular-text">
                             <p class="description">Return or Success url ( For display ticket you must put [rtbs_show_ticket] shortcode to your return url page ).</p>
@@ -687,6 +696,8 @@ class rtbs_plugin {
 	                <?php endforeach; ?>
 
                     <input type="hidden" name="pickup_key" value="<?= isset($_POST['pickup_key']) ? $_POST['pickup_key'] : ''; ?>">
+                    <input type="hidden" name="comments" value="<?= isset($_POST['comments']) ? $_POST['comments'] : ''; ?>">
+
                 </div>
 
                 <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
@@ -804,15 +815,14 @@ class rtbs_plugin {
                                 </div>
                             <?php endif; ?>
 
-                            <?php if (count($pickups) > 0 || count($tour->get_fields()) > 0): ?>
+                            <?php if (count($pickups) > 0 || count($tour->get_fields()) > 0 || $this->settings->is_show_comments): ?>
                                 <p class="rtbs-plugin-section-header">Additional Info </p>
 
                                 <?php if (count($pickups) > 0): ?>
                                     <div class="form-group">
-
-                                        <div class="col-lg-12">
-                                            <select class="form-control" name="pickup_key">
-                                                <option value="">Select a Pickup Point</option>
+                                        <label for="pickup_key" class="col-lg-4">Pickup from</label>
+                                        <div class="col-lg-8">
+                                            <select class="form-control" name="pickup_key" id="pickup_key">
                                                 <?php foreach ($pickups as $pickup): ?>
                                                     <option value="<?= $pickup->get_pickup_key(); ?>"><?= ($pickup->get_name() == '' ? 'No Pickup available' : $pickup->get_name() . ' - ' . $pickup->get_place() . ' - ' . date('h:i a', strtotime($_POST['hd_tour_date_time'] . ' -' . $pickup->get_minutes() . ' minutes'))); ?></option>
                                                 <?php endforeach; ?>
@@ -837,6 +847,16 @@ class rtbs_plugin {
                                     <?php endforeach; ?>
 
                                 <?php endif; ?>
+
+                                <?php if ($this->settings->is_show_comments): ?>
+                                    <div class="form-group">
+                                        <label for="comments" class="col-lg-4">Comments</label>
+                                        <div class="col-lg-8">
+                                            <textarea class="form-control" id="comments" name="comments" rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
                             <?php endif; ?>
 
                             <div class="hidden_hd">
@@ -963,6 +983,10 @@ class rtbs_plugin {
 
         if (!empty($_POST['pickup_key'])) {
             $booking->set_pickup_key($_POST['pickup_key']);
+        }
+
+        if (!empty($_POST['comments'])) {
+            $booking->set_comment($_POST['comments']);
         }
 
 	    if (!empty($_POST['fields'])) {

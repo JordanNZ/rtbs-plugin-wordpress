@@ -10,7 +10,10 @@ allow_url_fopen=1 is also required
 **06/12/2016: Version 3.2.0** 
 - Improvements to settings screen
 - Include Bootstrap Option
-- Improved error message
+- Improved error messages
+- Render Line Breaks in content
+- Fix for pickup points
+- Add Comments Fields
 
 **02/12/2016: Version 3.1.0** 
 - Fixed 0-pax error (No Bootstrap).

@@ -9,6 +9,7 @@ class rtbslive_settings
     public $is_show_promocode;
     public $is_include_bootstrap;
     public $is_show_remaining;
+    public $is_show_comments;
     public $is_test_mode;
     public $text_page_titles;
     public $text_section_titles;

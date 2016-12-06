@@ -9,11 +9,11 @@
     "packages": [
         {
             "name": "whytewaters/api-helper-library",
-            "version": "1.2.3",
+            "version": "1.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whytewaters/api-helper-library",
-                "reference": "9143169d2e45c1959c1726aefba6b42f44959956"
+                "reference": "9db02f73d86a31bd210f0a2e85a284054695cb24"
             },
             "require": {
                 "php": ">=5.3.0"
@@ -36,7 +36,7 @@
                 "issues": "https://github.com/whytewaters/api-helper-library/issues",
                 "source": "https://github.com/whytewaters/api-helper-library"
             },
-            "time": "2016-12-01 01:24:08"
+            "time": "2016-12-06 01:16:45"
         }
     ],
     "packages-dev": [],
