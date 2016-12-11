@@ -426,7 +426,7 @@ class rtbs_plugin {
                         <p>
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
-                        <p><i class="fa fa-calendar"></i>
+                        <p><i class="glyphicon fa-calendar"></i>
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
                         </p>
                     <?php endif; ?>
@@ -468,8 +468,15 @@ class rtbs_plugin {
                     };
 
                     var actionSelectDate = function selectDate() {
-                        var date = $(this).val();
-                        window.location.href = "index.php?tdate=" + date + "#rtbs-booking";
+                        var date = $(this).val(),
+                            url = window.location.href;
+
+                        if (url.indexOf("?") == -1) {
+                            url += "?";
+                        }
+
+                        url += "&tdate=" + date + "#rtbs-booking";
+                        window.location.href = url;
                     };
 
                     var actionPeopleChange = function() {
