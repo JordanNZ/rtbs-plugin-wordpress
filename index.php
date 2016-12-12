@@ -84,6 +84,10 @@ class rtbs_plugin {
             wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7.min.css', __FILE__));
         }
 
+        if ($this->settings->is_include_fontawesome) {
+            wp_enqueue_style('rtbs-fontawesome-css', plugins_url('/font-awesome-4.7.0.min.css', __FILE__));
+        }
+
         wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
         wp_enqueue_style('rtbs-plugin-base-css', plugins_url('/base.css', __FILE__ ));
     }
@@ -183,6 +187,15 @@ class rtbs_plugin {
                             <input type="hidden" name="is_include_bootstrap" value="0">
                             <input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($this->settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
                             <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row"><label for="is_include_fontawesome">Include Font Awesome CSS</label></th>
+                        <td>
+                            <input type="hidden" name="is_include_fontawesome" value="0">
+                            <input name="is_include_fontawesome" type="checkbox" id="is_include_fontawesome" <?= ($this->settings->is_include_fontawesome) ? 'checked' : '' ?> class="regular-checkbox" value="1">
+                            <p class="description">Only include font awesome if your theme does not have font awesome already</p>
                         </td>
                     </tr>
 

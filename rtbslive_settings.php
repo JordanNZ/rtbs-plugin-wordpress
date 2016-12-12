@@ -8,6 +8,7 @@ class rtbslive_settings
     public $url_success;
     public $is_show_promocode;
     public $is_include_bootstrap;
+    public $is_include_fontawesome;
     public $is_show_remaining;
     public $is_show_comments;
     public $is_test_mode;
