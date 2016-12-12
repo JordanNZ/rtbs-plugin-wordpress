@@ -7,6 +7,12 @@ allow_url_fopen=1 is also required
 
 ### Release Log
 
+**12/12/2016: Version 3.3.0** 
+- Rename .container class due to conflict
+- Use bootstrap glyphicon calendar instead of font-awesome icon
+- Improved Expose to API error message
+- Fix page redirect for calendar, when not using permalinks
+
 **06/12/2016: Version 3.2.0** 
 - Improvements to settings screen
 - Include Bootstrap Option
