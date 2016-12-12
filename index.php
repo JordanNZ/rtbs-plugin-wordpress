@@ -439,7 +439,7 @@ class rtbs_plugin {
                         <p>
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
-                        <p><i class="glyphicon fa-calendar"></i>
+                        <p><i class="fa fa-calendar"></i>
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
                         </p>
                     <?php endif; ?>
