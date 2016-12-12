@@ -378,7 +378,7 @@ class rtbs_plugin {
         // wrap output in api exception handler
         try {
             $this->render_plugin_frontend($atts);
-        } catch (ApiClientException $ex) {
+        } catch (Exception $ex) {
             $this->display_error($ex->getMessage());
         }
     }
