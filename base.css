@@ -1,7 +1,21 @@
 
 .rtbs-container {
-    width:100%;
+    min-width: 500px;
     background: #eee;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.rtbs-container:before,
+.rtbs-container:after {
+    display: table;
+    content: " ";
+}
+
+.rtbs-container:after {
+    clear: both;
 }
 
 .rtbs-plugin-section-header {

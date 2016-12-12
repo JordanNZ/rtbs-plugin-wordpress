@@ -410,7 +410,7 @@ class rtbs_plugin {
                 <?= $this->settings->css_style; ?>
             </style>
 
-            <div class="container rtbs-container">
+            <div class="rtbs-container">
 
                 <?php $this->render_navbar($hdStep); ?>
 
@@ -476,8 +476,7 @@ class rtbs_plugin {
                         // if tdate=yyyy-mm-dd exists in url
                         idx = url.indexOf("tdate=");
                         if (idx !== -1) {
-                            var s = url.substring(idx, idx + 16);
-                            url = url.replace(s, "tdate=" + date);
+                            url = url.replace(/tdate=\d{4}-\d{2}-\d{2}/, "tdate=" + date);
                         } else {
 
                             // handle #anchor if it exists
