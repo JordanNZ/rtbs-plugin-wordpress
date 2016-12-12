@@ -81,11 +81,7 @@ class rtbs_plugin {
         wp_enqueue_script('jquery-ui-datepicker');
 
         if ($this->settings->is_include_bootstrap) {
-            wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7.min.css', __FILE__));
-        }
-
-        if ($this->settings->is_include_fontawesome) {
-            wp_enqueue_style('rtbs-fontawesome-css', plugins_url('/font-awesome-4.7.0.min.css', __FILE__));
+            wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7-dist/css/bootstrap.min.css', __FILE__));
         }
 
         wp_enqueue_style('jquery-ui-css', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
@@ -187,15 +183,6 @@ class rtbs_plugin {
                             <input type="hidden" name="is_include_bootstrap" value="0">
                             <input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($this->settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
                             <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th scope="row"><label for="is_include_fontawesome">Include Font Awesome CSS</label></th>
-                        <td>
-                            <input type="hidden" name="is_include_fontawesome" value="0">
-                            <input name="is_include_fontawesome" type="checkbox" id="is_include_fontawesome" <?= ($this->settings->is_include_fontawesome) ? 'checked' : '' ?> class="regular-checkbox" value="1">
-                            <p class="description">Only include font awesome if your theme does not have font awesome already</p>
                         </td>
                     </tr>
 
@@ -439,7 +426,7 @@ class rtbs_plugin {
                         <p>
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
-                        <p><i class="fa fa-calendar"></i>
+                        <p><i class="glyphicon glyphicon-calendar"></i>
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
                         </p>
                     <?php endif; ?>
@@ -482,13 +469,34 @@ class rtbs_plugin {
 
                     var actionSelectDate = function selectDate() {
                         var date = $(this).val(),
+                            idx,
+                            anchor = "",
                             url = window.location.href;
 
-                        if (url.indexOf("?") == -1) {
-                            url += "?";
+                        // if tdate=yyyy-mm-dd exists in url
+                        idx = url.indexOf("tdate=");
+                        if (idx !== -1) {
+                            var s = url.substring(idx, idx + 16);
+                            url = url.replace(s, "tdate=" + date);
+                        } else {
+
+                            // handle #anchor if it exists
+                            idx = url.indexOf("#");
+                            if (idx !== -1) {
+                                anchor = url.substring(idx);
+                                url = url.substring(0, idx - 1);
+                            }
+
+                            // append ? if needed
+                            if (url.indexOf("?") == -1) {
+                                url += "?";
+                            } else {
+                                url += "&";
+                            }
+
+                            url += "tdate=" + date + anchor;
                         }
 
-                        url += "&tdate=" + date + "#rtbs-booking";
                         window.location.href = url;
                     };
 
