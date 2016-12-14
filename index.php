@@ -270,6 +270,7 @@ class rtbs_plugin {
     public function rtbs_admin_shortcodes() {
 
         $tours = array();
+        $error_msg = null;
 
         try {
             $booking_service = $this->get_booking_service_connection();
@@ -277,9 +278,8 @@ class rtbs_plugin {
                 $supplier = $booking_service->get_supplier($this->settings->supplier_key);
                 $tours = $supplier->get_tours();
             }
-        } catch (ApiClientException $ex) {
-            $this->display_error($ex->getMessage());
-            return;
+        } catch (Exception $ex) {
+            $error_msg = $ex->getMessage();
         }
 
         ?>
@@ -302,6 +302,13 @@ class rtbs_plugin {
 
                 <h2>Shortcode for display ticket to your return url page</h2>
                 <code>[rtbs_show_ticket]</code>
+
+                <?php
+                    if ($error_msg) {
+                        $this->display_error($error_msg);
+                    };
+                ?>
+
             </div>
 
 
