@@ -102,6 +102,10 @@ class rtbs_plugin {
 
     private function get_booking_service_connection()
     {
+        if (!$this->settings->api_key) {
+            throw new Exception('API Key is required');
+        }
+
         if (!$this->booking_service && $this->settings->api_key) {
             $credentials = array(
                 'host' => $this->host(),
