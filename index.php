@@ -4,7 +4,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 3.3.1
+Version: 3.4
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -16,7 +16,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '3.3.1';
+    private $rtbslive_plugin_version = '3.4.0';
     private $wpdb;
 
     private $booking_service;
@@ -25,6 +25,8 @@ class rtbs_plugin {
     private $settings;
 
     public function __construct($wpdb) {
+        date_default_timezone_set('Pacific/Auckland');
+
         $this->wpdb = $wpdb;
 
         register_activation_hook(__FILE__, array($this, 'plugin_activate'));
@@ -32,6 +34,11 @@ class rtbs_plugin {
 
         add_action('admin_menu', array($this, 'build_admin_menu'));
         add_action('wp_enqueue_scripts', array($this, 'plugin_enqueue_scripts'));
+
+
+        // ajax actions
+        add_action('wp_ajax_rtbs_availability',  array($this, 'ajax_frontend_availability'));
+        add_action('wp_ajax_nopriv_rtbs_availability',  array($this, 'ajax_frontend_availability'));
 
         add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
         add_shortcode('rtbs_show_ticket', array($this, 'rtbs_show_ticket'));
@@ -77,6 +84,11 @@ class rtbs_plugin {
     public function plugin_enqueue_scripts() {
         wp_enqueue_script('jquery');
         wp_enqueue_script('jquery-ui-datepicker');
+        wp_enqueue_script('rtbs-plugin-script', plugins_url('rtbs.plugin.js', __FILE__), array('jquery'));
+        wp_localize_script('rtbs-plugin-script', 'myRtbsObject', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'loaderImgUrl' => plugins_url('img/ajax-loader-0F5592.gif', __FILE__)
+        ));
 
         if ($this->settings->is_include_bootstrap) {
             wp_enqueue_style('rtbs-bootstrap-css', plugins_url('/bootstrap-3.3.7-dist/css/bootstrap.min.css', __FILE__));
@@ -117,8 +129,6 @@ class rtbs_plugin {
 
         return $this->booking_service;
     }
-
-
 
 
     public function rtbs_admin_settings() {
@@ -379,15 +389,30 @@ class rtbs_plugin {
         }
     }
 
+    /**
+     * Render availability step on ajax request
+     */
+    public function ajax_frontend_availability() {
+        $booking_service = $this->get_booking_service_connection();
+
+        $date = (isset($_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
+        $shortcode_tour_keys = (isset($_REQUEST['tour_key'])) ? $_REQUEST['tour_key'] : '';
+        $shortcode_tour_keys = explode(',', $shortcode_tour_keys);
+
+        $this->step_availability($booking_service, $shortcode_tour_keys, $date);
+
+        wp_die();
+    }
+
 
     private function render_plugin_frontend($atts) {
-        date_default_timezone_set('Pacific/Auckland');
 
         $booking_service = $this->get_booking_service_connection();
         $booking_service->get_supplier($this->settings->supplier_key);
 
         // shortcode with attribute or parameter
         if (isset($atts['tour_key'])) {
+            $data_tour_key = $atts['tour_key'];
             if ($atts['tour_key']  == 'tour_key1,tour_key2') {
                 $this->display_error('Please replace "tour_key1,tour_key2" in the shortcode, with actual tour keys');
                 return;
@@ -395,6 +420,7 @@ class rtbs_plugin {
 
             $shortcode_tour_keys = explode(',', $atts['tour_key']);
         } else {
+            $data_tour_key = '';
             $shortcode_tour_keys = null;
         }
 
@@ -436,12 +462,12 @@ class rtbs_plugin {
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
                         <p><i class="glyphicon glyphicon-calendar"></i>
-                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>">
+                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>" data-tour-key="<?= $data_tour_key; ?>">
                         </p>
                     <?php endif; ?>
 
 
-                    <div class="row rtbs-tours-step-<?= $hdStep; ?>">
+                    <div class="row rtbs-tours-step rtbs-tours-step-<?= $hdStep; ?>">
                         <?php
 
                             switch ($hdStep) {
@@ -464,147 +490,6 @@ class rtbs_plugin {
                 </div>
             </div>
 
-
-            <script>
-                var rtbsPluginWordpress = (function ($) {
-
-                    var $selectPeople,
-                        $datePicker;
-
-                    var isEmail = function(email) {
-                        var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
-                        return regex.test(email);
-                    };
-
-                    var actionSelectDate = function selectDate() {
-                        var date = $(this).val(),
-                            idx,
-                            anchor = "",
-                            url = window.location.href;
-
-                        // if tdate=yyyy-mm-dd exists in url
-                        idx = url.indexOf("tdate=");
-                        if (idx !== -1) {
-                            url = url.replace(/tdate=\d{4}-\d{2}-\d{2}/, "tdate=" + date);
-                        } else {
-
-                            // handle #anchor if it exists
-                            idx = url.indexOf("#");
-                            if (idx !== -1) {
-                                anchor = url.substring(idx);
-                                url = url.substring(0, idx - 1);
-                            }
-
-                            // append ? if needed
-                            if (url.indexOf("?") == -1) {
-                                url += "?";
-                            } else {
-                                url += "&";
-                            }
-
-                            url += "tdate=" + date + anchor;
-                        }
-
-                        window.location.href = url;
-                    };
-
-                    var actionPeopleChange = function() {
-                        var totalAmount= 0.00,
-                            totalPax = 0;
-
-                        $selectPeople.each(function () {
-                            totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
-                            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
-                        });
-
-                        var numRemaining = $('#hd-remaining').val(),
-                            $htmlTotalPrice = $('#totalPrice');
-
-                        if (totalPax > numRemaining) {
-                            $htmlTotalPrice.css({color: 'red'});
-                            $htmlTotalPrice.html("Only " + numRemaining + " places remaining");
-                        } else {
-                            $htmlTotalPrice.css({color: 'black'});
-                            $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
-                        }
-                    };
-
-                    actionSubmitForm = function() {
-                        var totalPax = 0,
-                            errors = [],
-                            numRemaining = $('#hd-remaining').val();
-
-                        $('select.nPeople').each(function () {
-                            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
-                        });
-
-                        if (!$('#rtbsFname').val()) {
-                            errors.push('First Name is required');
-                        }
-
-                        if (!$('#rtbsLname').val()) {
-                            errors.push('Last Name is required');
-                        }
-
-                        if (!$('#rtbsEmail').val()) {
-                            errors.push('Email is required');
-                        } else if (!isEmail($('#rtbsEmail').val())) {
-                            errors.push('Email is not valid');
-                        }
-
-                        if (!$('#rtbsPhone').val()) {
-                            errors.push('Phone is required');
-                        }
-
-                        if (totalPax == 0) {
-                            errors.push("No prices selected");
-                        }
-
-                        if (totalPax > numRemaining) {
-                            errors.push("Only " + numRemaining + " places remaining");
-                        }
-
-                        if (errors.length) {
-                            $('.alert-danger').show().html(errors.join('<br>'));
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    };
-
-                    var actionTandcChecked = function() {
-                        $('#confirm_pay').prop('disabled', !$(this).is(':checked'));
-                    };
-
-                    var cacheElements = function() {
-                        $selectPeople = $('select.nPeople');
-                        $datePicker = $('.rtbs-plugin-datepicker');
-                    };
-
-                    var bindEvents = function() {
-                        $selectPeople.on('change', actionPeopleChange);
-                        $('#details-form').on('submit', actionSubmitForm);
-                        $('#rtbs-checkbox-tandc').on('change', actionTandcChecked);
-                        $datePicker.on('change', actionSelectDate);
-                    };
-
-                    var init = function() {
-                        cacheElements();
-                        bindEvents();
-
-                        $datePicker.datepicker({dateFormat: 'yy-mm-dd'});
-                    };
-
-                    return {
-                        init: init
-                    };
-
-                })(jQuery);
-
-                jQuery(document).ready(function() {
-                    rtbsPluginWordpress.init()
-                });
-            </script>
         </div>
         <?php
     }
