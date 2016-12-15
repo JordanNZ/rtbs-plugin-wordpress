@@ -461,7 +461,7 @@ class rtbs_plugin {
                         <p>
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
-                        <p><i class="glyphicon glyphicon-calendar"></i>
+                        <p>Date:
                             <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>" data-tour-key="<?= $data_tour_key; ?>">
                         </p>
                     <?php endif; ?>
@@ -860,7 +860,7 @@ class rtbs_plugin {
 
                                 <form action="#rtbs-booking" method="post">
                                     <p>
-                                        <?= date('h:i a', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
+                                        <?= date('g:ia', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
                                         <input type="hidden" name="hd_step" value="2">
                                         <input type="hidden" name="hd_remaining" value="<?= $session->get_remaining(); ?>"/>
                                         <input type="hidden" name="hd_tour_key" value="<?= $tour->get_tour_key(); ?>">
