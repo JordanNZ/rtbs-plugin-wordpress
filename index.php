@@ -397,7 +397,6 @@ class rtbs_plugin {
 
         $date = (isset($_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
         $shortcode_tour_keys = (isset($_REQUEST['tour_key'])) ? $_REQUEST['tour_key'] : '';
-        $shortcode_tour_keys = explode(',', $shortcode_tour_keys);
 
         $this->step_availability($booking_service, $shortcode_tour_keys, $date);
 
@@ -412,16 +411,14 @@ class rtbs_plugin {
 
         // shortcode with attribute or parameter
         if (isset($atts['tour_key'])) {
-            $data_tour_key = $atts['tour_key'];
-            if ($atts['tour_key']  == 'tour_key1,tour_key2') {
+            $shortcode_tour_keys = $atts['tour_key'];
+
+            if ($shortcode_tour_keys  == 'tour_key1,tour_key2') {
                 $this->display_error('Please replace "tour_key1,tour_key2" in the shortcode, with actual tour keys');
                 return;
             }
-
-            $shortcode_tour_keys = explode(',', $atts['tour_key']);
         } else {
-            $data_tour_key = '';
-            $shortcode_tour_keys = null;
+            $shortcode_tour_keys = '';
         }
 
         if (empty($this->settings->supplier_key)) {
@@ -462,7 +459,7 @@ class rtbs_plugin {
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
                         <p>Date:
-                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>" data-tour-key="<?= $data_tour_key; ?>">
+                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>" data-tour-key="<?= $shortcode_tour_keys; ?>">
                         </p>
                     <?php endif; ?>
 
@@ -813,15 +810,15 @@ class rtbs_plugin {
 
     /**
      * @param \Rtbs\ApiHelper\BookingServiceImpl $booking_service
-     * @param array $shortcode_tour_keys
+     * @param string $shortcode_tour_keys
      * @param string $date
      */
     private function step_availability($booking_service, $shortcode_tour_keys, $date) {
 
         $supplier = $booking_service->get_supplier($this->settings->supplier_key);
 
-        if ($shortcode_tour_keys) {
-            $tour_keys = $shortcode_tour_keys;
+        if (!empty($shortcode_tour_keys)) {
+            $tour_keys = explode(',', $shortcode_tour_keys);
         } else {
             $tour_keys = array();
             foreach ($supplier->get_tours() as $tour) {
