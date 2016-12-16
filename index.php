@@ -4,7 +4,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 3.4
+Version: 3.4.1
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -16,7 +16,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '3.4.0';
+    private $rtbslive_plugin_version = '3.4.1';
     private $wpdb;
 
     private $booking_service;
@@ -453,8 +453,6 @@ class rtbs_plugin {
                         <h5>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
                     <?php else: ?>
                         <h2 class="title-first-page"><?= htmlentities($this->settings->text_first_page_title); ?></h2>
-                        <h5>
-                            Showing: <?= date('D jS F Y', strtotime($date)); ?></h5>
                         <p>
                             <?= nl2br($this->settings->html_first_page_content); ?>
                         </p>
@@ -843,10 +841,15 @@ class rtbs_plugin {
             $sessions_by_tour[$session->get_tour_key()][] = $session;
         }
 
+        $is_no_tours = true;
+
+        echo '<h5>Showing: ' . date('D, jS M Y', strtotime($date)) . '</h5>';
+
         foreach ($tours as $tour) {
             if (!empty($sessions_by_tour[$tour->get_tour_key()])) {
                 /** @var \Rtbs\ApiHelper\Models\Session[] $sessions */
                 $sessions = $sessions_by_tour[$tour->get_tour_key()];
+                $is_no_tours = false;
                 ?>
                 <div class="col-md-12">
                     <div class="panel panel-default">
@@ -874,6 +877,10 @@ class rtbs_plugin {
                 </div>
                 <?php
             }
+        }
+
+        if ($is_no_tours) {
+            echo '<div class="alert alert-info" style="margin-bottom: 20px;">No tours are available on this date</div>';
         }
     }
 
