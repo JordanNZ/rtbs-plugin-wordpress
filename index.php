@@ -450,7 +450,7 @@ class rtbs_plugin {
 
                      <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
                         <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
-                        <h5>Selected Date & Time: <?= date('l dS F Y h:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
+                        <h5>Selected Tour: <?= date('D jS M Y g:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
                     <?php else: ?>
                         <h2 class="title-first-page"><?= htmlentities($this->settings->text_first_page_title); ?></h2>
                         <p>
