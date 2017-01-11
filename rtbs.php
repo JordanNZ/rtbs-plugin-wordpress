@@ -869,10 +869,15 @@ class rtbs_plugin {
         $booking_service = $this->get_booking_service_instance();
         $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date, $is_search_next_available = true);
 
-        $first_available_date = date('Y-m-d', strtotime($sessions_and_advanced_dates->get_first_open_session_datetime()));
-        if ($first_available_date != $date) {
-            $is_first_available = true;
-            $date = $first_available_date;
+        $first_available_date = $sessions_and_advanced_dates->get_first_available_session_datetime();
+
+        if (!empty($first_available_date)) {
+            $first_available_date = date('Y-m-d', strtotime($first_available_date));
+
+            if ($first_available_date != $date) {
+                $is_first_available = true;
+                $date = $first_available_date;
+            }
         }
 
 
