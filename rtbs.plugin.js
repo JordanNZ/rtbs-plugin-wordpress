@@ -1,7 +1,7 @@
 var RTBSplugin = (function ($) {
 
     var $selectPeople,
-        $datePicker;
+        $div;
 
     var isEmail = function(email) {
         var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
@@ -17,6 +17,7 @@ var RTBSplugin = (function ($) {
         $.post(myRtbsObject.ajaxUrl, {"action": "rtbs_availability", "date": $date.val(), "tour_key": $date.data('tour-key')})
             .done(function (res) {
                 $content.html(res);
+                initDatePicker();
             })
             .fail(function (res) {
                 $content.html("Failed Loading Tours");
@@ -93,21 +94,28 @@ var RTBSplugin = (function ($) {
 
     var cacheElements = function() {
         $selectPeople = $('select.nPeople');
-        $datePicker = $('.rtbs-plugin-datepicker');
+        $datePicker = $();
     };
 
     var bindEvents = function() {
+        $div = $(".rtbs-plugin-content");
         $selectPeople.on('change', actionPeopleChange);
         $('#details-form').on('submit', actionSubmitForm);
         $('#rtbs-checkbox-tandc').on('change', actionTandcChecked);
-        $datePicker.on('change', actionSelectDate);
+        $div.on('change', ".rtbs-plugin-datepicker", actionSelectDate);
+    };
+
+    var initDatePicker = function() {
+        $(".rtbs-plugin-datepicker").datepicker({
+            minDate: 0,
+            dateFormat: 'yy-mm-dd'
+        });
     };
 
     var init = function() {
         cacheElements();
         bindEvents();
-
-        $datePicker.datepicker({dateFormat: 'yy-mm-dd'});
+        initDatePicker();
     };
 
     return {

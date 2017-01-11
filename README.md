@@ -7,6 +7,13 @@ allow_url_fopen=1 is also required
 
 ### Release Log
 
+**11/01/2017: Version 4.0.0**
+- Instead of displaying sessions for current date, lookup next open session
+- Change to html structure around datepicker (may break styles)
+
+**22/12/2016: Version 3.4.2**
+- Make date formats consistent
+
 **16/12/2016: Version 3.4.1** 
 - When date is changed, update showing date correctly
 - Show message when there are no tours

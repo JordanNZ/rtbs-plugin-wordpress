@@ -4,19 +4,22 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 3.5.0
+Version: 4.0.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
 
 class rtbs_plugin {
 
+    const HOST_TEST = 'https://dev.rtbstraining.com';
+    const HOST_LIVE = 'https://rtbslive.com';
+
     const STEP_AVAILABILITY = 1;
     const STEP_DETAILS = 2;
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '3.5.0';
+    private $rtbslive_plugin_version = '4.0.0';
     private $wpdb;
 
     private $booking_service_instance;
@@ -62,7 +65,7 @@ class rtbs_plugin {
             if ($row) {
                 $this->settings->api_key = $row->api_key;
                 $this->settings->supplier_key = $row->supplier_key;
-                $this->settings->is_test_mode = ($row->rtbs_domain == 'https://dev.rtbstraining.com');
+                $this->settings->is_test_mode = ($row->rtbs_domain == self::HOST_TEST);
                 $this->settings->is_show_promocode = $row->is_show_promocode;
                 $this->settings->url_success = $row->success_url;
                 $this->settings->html_terms = $row->terms_cond;
@@ -86,7 +89,7 @@ class rtbs_plugin {
     public function plugin_enqueue_scripts() {
         wp_enqueue_script('jquery');
         wp_enqueue_script('jquery-ui-datepicker');
-        wp_enqueue_script('rtbs-plugin-script', plugins_url('rtbs.plugin.js', __FILE__), array('jquery'));
+        wp_enqueue_script('rtbs-plugin-script', plugins_url('rtbs.plugin.js', __FILE__), array('jquery'), $this->rtbslive_plugin_version);
         wp_localize_script('rtbs-plugin-script', 'myRtbsObject', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'loaderImgUrl' => plugins_url('img/ajax-loader-0F5592.gif', __FILE__)
@@ -110,9 +113,7 @@ class rtbs_plugin {
 
 
     private function host() {
-        return 'http://rtbstraining.local';
-
-        return ($this->settings->is_test_mode) ? 'https://dev.rtbstraining.com' : 'https://rtbslive.com';
+        return ($this->settings->is_test_mode) ? self::HOST_TEST : self::HOST_LIVE;
     }
 
 
@@ -243,7 +244,7 @@ class rtbs_plugin {
                         <td>
                             <input type="hidden" name="is_test_mode" value="0">
                             <input name="is_test_mode" type="checkbox" id="is_test_mode" <?= ($this->settings->is_test_mode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
-                            <p class="description">Use testing server dev.rtbstraining.com, no live bookings will be created</p>
+                            <p class="description">Use testing server <?= self::HOST_TEST; ?> no live bookings will be created</p>
                         </td>
                     </tr>
 
@@ -462,18 +463,7 @@ class rtbs_plugin {
 
         $shortcode_tour_keys = (isset($_REQUEST['tour_key'])) ? $_REQUEST['tour_key'] : '';
 
-        $tour_keys = $this->get_tour_keys($shortcode_tour_keys);
-        $tours = $this->get_tours($tour_keys);
-
-        $booking_service = $this->get_booking_service_instance();
-        $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date);
-
-        if (!$sessions_and_advanced_dates->has_open_session()) {
-            $date = $sessions_and_advanced_dates->get_earliest_advance_date();
-            $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date);
-        }
-
-        $this->step_availability($tours, $date, $sessions_and_advanced_dates);
+        $this->step_availability($shortcode_tour_keys, $date);
 
         wp_die();
     }
@@ -506,18 +496,6 @@ class rtbs_plugin {
             return;
         }
 
-        if ($hdStep == self::STEP_AVAILABILITY) {
-            $tour_keys = $this->get_tour_keys($shortcode_tour_keys);
-            $tours = $this->get_tours($tour_keys);
-            $booking_service = $this->get_booking_service_instance();
-            $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date);
-
-            if (!$sessions_and_advanced_dates->has_open_session()) {
-                $date = $sessions_and_advanced_dates->get_earliest_advance_date();
-                $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date);
-            }
-        }
-
         ?>
 
         <div class="rtbs-plugin">
@@ -533,34 +511,20 @@ class rtbs_plugin {
 
                 <div class="rtbs-plugin-content">
 
-                     <?php if (in_array($hdStep, array(self::STEP_DETAILS, self::STEP_CONFIRM, self::STEP_PAYMENT))): ?>
-                        <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
-                        <h5>Selected Tour: <?= date('D jS M Y g:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
-                    <?php else: ?>
-                        <h2 class="title-first-page"><?= htmlentities($this->settings->text_first_page_title); ?></h2>
-                        <p>
-                            <?= nl2br($this->settings->html_first_page_content); ?>
-                        </p>
-                        <p>Date:
-                            <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="<?= $date; ?>" data-tour-key="<?= $shortcode_tour_keys; ?>">
-                        </p>
-                    <?php endif; ?>
-
-
                     <div class="row rtbs-tours-step rtbs-tours-step-<?= $hdStep; ?>">
                         <?php
 
                             switch ($hdStep) {
+                                case self::STEP_AVAILABILITY:
+                                    $this->step_availability($shortcode_tour_keys, $date);
+                                    break;
+
                                 case self::STEP_DETAILS:
                                     $this->step_details();
                                     break;
 
                                 case self::STEP_CONFIRM:
                                     $this->step_confirm();
-                                    break;
-
-                                case self::STEP_AVAILABILITY:
-                                    $this->step_availability($tours, $date, $sessions_and_advanced_dates);
                                     break;
                             }
 
@@ -597,6 +561,8 @@ class rtbs_plugin {
         }
 
         ?>
+            <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
+            <h5>Selected Tour: <?= date('l jS M Y g:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
 
             <form action="#rtbs-booking" method="post">
 
@@ -734,6 +700,8 @@ class rtbs_plugin {
 
 	    $qty_range = range(0, $_POST['hd_remaining']);
     ?>
+        <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
+        <h5>Selected Tour: <?= date('l jS M Y g:i a', strtotime($_POST['hd_tour_date_time'])); ?></h5>
 
         <div class="col-md-12 rtbs-plugin-box">
             <div class="col-md-2"></div>
@@ -888,12 +856,26 @@ class rtbs_plugin {
 
 
     /**
-     * @param \Rtbs\ApiHelper\Models\Tour[] $tours
+     * @param string $shortcode_tour_keys
      * @param string $date
-     * @var \Rtbs\ApiHelper\Models\SessionAndAdvanceDates $sessions_and_advanced_dates
      */
-    private function step_availability($tours, $date, $sessions_and_advanced_dates)
+    private function step_availability($shortcode_tour_keys, $date)
     {
+        $is_first_available = false;
+
+        $tour_keys = $this->get_tour_keys($shortcode_tour_keys);
+        $tours = $this->get_tours($tour_keys);
+
+        $booking_service = $this->get_booking_service_instance();
+        $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date, $is_search_next_available = true);
+
+        $first_available_date = date('Y-m-d', strtotime($sessions_and_advanced_dates->get_first_open_session_datetime()));
+        if ($first_available_date != $date) {
+            $is_first_available = true;
+            $date = $first_available_date;
+        }
+
+
         $sessions_by_tour = array();
 
         foreach ($sessions_and_advanced_dates->get_sessions() as $session) {
@@ -902,7 +884,12 @@ class rtbs_plugin {
 
         $is_no_tours = true;
 
-        echo '<h5>Showing: ' . date('D, jS M Y', strtotime($date)) . '</h5>';
+        $date_prefix_text = ($is_first_available) ? 'The next date you can book online is: ' : 'Showing: ';
+
+        echo '<h2 class="title-first-page">' . htmlentities($this->settings->text_first_page_title) . '</h2>';
+        echo '<p>' . nl2br($this->settings->html_first_page_content) . '</p>';
+        echo '<p>Date: <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="' . $date . '" data-tour-key="' . $shortcode_tour_keys . '"></p>';
+        echo '<h5>' . $date_prefix_text . ' ' . date('l, jS M Y', strtotime($date)) . '</h5>';
 
         foreach ($tours as $tour) {
             if (!empty($sessions_by_tour[$tour->get_tour_key()])) {

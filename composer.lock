@@ -4,16 +4,16 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "4871890f562af083d889621b46018a0a",
-    "content-hash": "cb369eb80084a44910cda073e4c101df",
+    "hash": "2f39beab12367886fef5730d4b5d8063",
+    "content-hash": "3ba38c4577f88efd78b8c204cfe5e283",
     "packages": [
         {
             "name": "whytewaters/api-helper-library",
-            "version": "1.2.5",
+            "version": "1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whytewaters/api-helper-library",
-                "reference": "d61370903a67f93d6bea783b6e7c6a8b3a93100b"
+                "reference": "aeca29be00d720bf472dd16a490a0937c417825e"
             },
             "require": {
                 "php": ">=5.3.0"
@@ -36,7 +36,7 @@
                 "issues": "https://github.com/whytewaters/api-helper-library/issues",
                 "source": "https://github.com/whytewaters/api-helper-library"
             },
-            "time": "2016-12-12 00:24:24"
+            "time": "2017-01-11 01:57:40"
         }
     ],
     "packages-dev": [],
