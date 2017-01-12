@@ -113,7 +113,6 @@ class rtbs_plugin {
 
 
     private function host() {
-        return 'http://rtbstraining.local';
         return ($this->settings->is_test_mode) ? self::HOST_TEST : self::HOST_LIVE;
     }
 
