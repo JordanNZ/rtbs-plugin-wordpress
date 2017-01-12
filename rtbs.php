@@ -895,9 +895,7 @@ class rtbs_plugin {
         $sessions_by_tour = array();
 
         foreach ($sessions_and_advanced_dates->get_sessions() as $session) {
-            if ($session->is_open()) {
-                $sessions_by_tour[$session->get_tour_key()][] = $session;
-            }
+            $sessions_by_tour[$session->get_tour_key()][] = $session;
         }
 
         $date_prefix_text = ($is_open_available) ? 'The next date you can book online is: ' : 'Showing: ';
