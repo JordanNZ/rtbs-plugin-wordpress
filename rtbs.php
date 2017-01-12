@@ -113,6 +113,7 @@ class rtbs_plugin {
 
 
     private function host() {
+        return 'http://rtbstraining.local';
         return ($this->settings->is_test_mode) ? self::HOST_TEST : self::HOST_LIVE;
     }
 
@@ -861,7 +862,7 @@ class rtbs_plugin {
      */
     private function step_availability($shortcode_tour_keys, $date)
     {
-        $is_first_available = false;
+        $is_open_available = false;
 
         $tour_keys = $this->get_tour_keys($shortcode_tour_keys);
         $tours = $this->get_tours($tour_keys);
@@ -869,17 +870,24 @@ class rtbs_plugin {
         $booking_service = $this->get_booking_service_instance();
         $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $date, $is_search_next_available = true);
 
-        $first_available_date = $sessions_and_advanced_dates->get_first_available_session_datetime();
+        $first_open_date = $sessions_and_advanced_dates->get_first_available_session_datetime(null, $open_only = true);
 
-        if (!empty($first_available_date)) {
-            $first_available_date = date('Y-m-d', strtotime($first_available_date));
+        // if no open dates, then search advance date
+        if (!$first_open_date) {
+            $first_advance_date = $sessions_and_advanced_dates->get_first_advance_date();
+            $sessions_and_advanced_dates = $booking_service->get_sessions_and_advance_dates($this->settings->supplier_key, $tour_keys, $first_advance_date, $is_search_next_available = true);
 
-            if ($first_available_date != $date) {
-                $is_first_available = true;
-                $date = $first_available_date;
-            }
+            $first_open_date = $sessions_and_advanced_dates->get_first_available_session_datetime(null, $open_only = true);
         }
 
+        if (!empty($first_open_date)) {
+            $first_open_date = date('Y-m-d', strtotime($first_open_date));
+
+            if ($first_open_date != $date) {
+                $is_open_available = true;
+                $date = $first_open_date;
+            }
+        }
 
         $sessions_by_tour = array();
 
@@ -889,44 +897,55 @@ class rtbs_plugin {
 
         $is_no_tours = true;
 
-        $date_prefix_text = ($is_first_available) ? 'The next date you can book online is: ' : 'Showing: ';
+        $date_prefix_text = ($is_open_available) ? 'The next date you can book online is: ' : 'Showing: ';
 
         echo '<h2 class="title-first-page">' . htmlentities($this->settings->text_first_page_title) . '</h2>';
         echo '<p>' . nl2br($this->settings->html_first_page_content) . '</p>';
         echo '<p>Date: <input type="text" placeholder="Change Date" class="rtbs-plugin-datepicker" value="' . $date . '" data-tour-key="' . $shortcode_tour_keys . '"></p>';
-        echo '<h5>' . $date_prefix_text . ' ' . date('l, jS M Y', strtotime($date)) . '</h5>';
 
-        foreach ($tours as $tour) {
-            if (!empty($sessions_by_tour[$tour->get_tour_key()])) {
-                /** @var \Rtbs\ApiHelper\Models\Session[] $sessions */
-                $sessions = $sessions_by_tour[$tour->get_tour_key()];
-                $is_no_tours = false;
-                ?>
-                <div class="col-md-12">
-                    <div class="panel panel-default">
-                        <div class="panel-heading"><h4><?= htmlentities($tour->get_name()); ?> <?php if ($this->settings->is_test_mode): ?><span style="background: red; padding: 2px; color: yellow;">TEST MODE IS ON</span><?php endif; ?></h4></div>
-                        <div class="panel-body">
+        if ($is_open_available) {
+            echo '<h5>' . $date_prefix_text . ' ' . date('l, jS M Y', strtotime($date)) . '</h5>';
 
-                            <?php foreach ($sessions as $session): ?>
+            foreach ($tours as $tour) {
+                if (!empty($sessions_by_tour[$tour->get_tour_key()])) {
+                    /** @var \Rtbs\ApiHelper\Models\Session[] $sessions */
+                    $sessions = $sessions_by_tour[$tour->get_tour_key()];
+                    $is_no_tours = false;
+                    ?>
+                    <div class="col-md-12">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4><?= htmlentities($tour->get_name()); ?> <?php if ($this->settings->is_test_mode): ?>
+                                        <span style="background: red; padding: 2px; color: yellow;">TEST MODE IS ON</span><?php endif; ?>
+                                </h4></div>
+                            <div class="panel-body">
 
-                                <form action="#rtbs-booking" method="post">
-                                    <p>
-                                        <?= date('g:ia', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
-                                        <input type="hidden" name="hd_step" value="2">
-                                        <input type="hidden" name="hd_remaining" value="<?= $session->get_remaining(); ?>"/>
-                                        <input type="hidden" name="hd_tour_key" value="<?= $tour->get_tour_key(); ?>">
-                                        <input type="hidden" name="hd_date" value="<?= $date; ?>">
-                                        <input type="hidden" name="hd_tour_name" value="<?= $tour->get_name(); ?>">
-                                        <input type="hidden" name="hd_tour_date_time" value="<?= $session->get_datetime(); ?>">
-                                        <button <?= ($session->is_open()) ? '' : 'disabled' ?> class="btn btn-primary" type="submit" name="button"><?= $session->get_state(); ?></button>
-                                    </p>
-                                </form>
-                            <?php endforeach; ?>
+                                <?php foreach ($sessions as $session): ?>
 
+                                    <form action="#rtbs-booking" method="post">
+                                        <p>
+                                            <?= date('g:ia', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
+                                            <input type="hidden" name="hd_step" value="2">
+                                            <input type="hidden" name="hd_remaining"
+                                                   value="<?= $session->get_remaining(); ?>"/>
+                                            <input type="hidden" name="hd_tour_key"
+                                                   value="<?= $tour->get_tour_key(); ?>">
+                                            <input type="hidden" name="hd_date" value="<?= $date; ?>">
+                                            <input type="hidden" name="hd_tour_name" value="<?= $tour->get_name(); ?>">
+                                            <input type="hidden" name="hd_tour_date_time"
+                                                   value="<?= $session->get_datetime(); ?>">
+                                            <button <?= ($session->is_open()) ? '' : 'disabled' ?>
+                                                    class="btn btn-primary" type="submit"
+                                                    name="button"><?= $session->get_state(); ?></button>
+                                        </p>
+                                    </form>
+                                <?php endforeach; ?>
+
+                            </div>
                         </div>
                     </div>
-                </div>
-                <?php
+                    <?php
+                }
             }
         }
 
