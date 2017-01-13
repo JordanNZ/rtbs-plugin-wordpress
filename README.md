@@ -6,6 +6,8 @@ This means no short array syntax
 allow_url_fopen=1 is also required
 
 ### Release Log
+**13/01/2017: Version 4.1.0**
+- When plugin loads, show first date with available sessions
 
 **11/01/2017: Version 4.0.0**
 - Instead of displaying sessions for current date, lookup next open session
