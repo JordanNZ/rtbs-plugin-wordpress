@@ -11,6 +11,7 @@ new rtbs_plugin($wpdb);
 
 class rtbs_plugin {
 
+    const HOST_DEBUG = 'http://rtbstraining.local';
     const HOST_TEST = 'https://dev.rtbstraining.com';
     const HOST_LIVE = 'https://rtbslive.com';
 
@@ -19,7 +20,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '4.0.0';
+    private $rtbslive_plugin_version = '4.2.0';
     private $wpdb;
 
     private $booking_service_instance;
@@ -29,7 +30,9 @@ class rtbs_plugin {
     /** @var rtbslive_settings $settings */
     private $settings;
 
-    public function __construct($wpdb) {
+
+    public function __construct($wpdb)
+    {
         date_default_timezone_set('Pacific/Auckland');
 
         $this->wpdb = $wpdb;
@@ -53,8 +56,8 @@ class rtbs_plugin {
     }
 
 
-    public function plugin_activate() {
-
+    public function plugin_activate()
+    {
         $current_version = get_option("rtbslive_plugin_version");
 
         if ($current_version != $this->rtbslive_plugin_version) {
@@ -86,7 +89,8 @@ class rtbs_plugin {
     }
 
 
-    public function plugin_enqueue_scripts() {
+    public function plugin_enqueue_scripts()
+    {
         wp_enqueue_script('jquery');
         wp_enqueue_script('jquery-ui-datepicker');
         wp_enqueue_script('rtbs-plugin-script', plugins_url('rtbs.plugin.js', __FILE__), array('jquery'), $this->rtbslive_plugin_version);
@@ -104,7 +108,8 @@ class rtbs_plugin {
     }
 
 
-    public function build_admin_menu() {
+    public function build_admin_menu()
+    {
         add_menu_page('RTBS', 'RTBS', '', __FILE__, 'moveing_company', plugins_url('img/settings.png', __FILE__));
         add_submenu_page(__FILE__, 'Settings', 'Settings', 'administrator', 'adminSettings', array($this, 'rtbs_admin_settings'));
         add_submenu_page(__FILE__, 'CSS Style', 'CSS Style', 'administrator', 'css-style-rtbs-booking', array($this, 'rtbs_admin_css_style'));
@@ -112,8 +117,15 @@ class rtbs_plugin {
     }
 
 
-    private function host() {
-        return ($this->settings->is_test_mode) ? self::HOST_TEST : self::HOST_LIVE;
+    private function host()
+    {
+        if (stripos($_SERVER['HTTP_HOST'], '.local') !== false) {
+            $host = self::HOST_DEBUG;
+        } else {
+            $host = ($this->settings->is_test_mode) ? self::HOST_TEST : self::HOST_LIVE;
+        }
+
+        return $host;
     }
 
 
@@ -153,6 +165,7 @@ class rtbs_plugin {
         return $this->supplier_instance;
     }
 
+
     /**
      * @param string $shortcode_tour_keys
      * @return array
@@ -173,6 +186,7 @@ class rtbs_plugin {
         return $tour_keys;
     }
 
+
     /**
      * @param array $tour_keys
      * @return \Rtbs\ApiHelper\Models\Tour[]
@@ -190,7 +204,8 @@ class rtbs_plugin {
     }
 
 
-    public function rtbs_admin_settings() {
+    public function rtbs_admin_settings()
+    {
         $is_saved = false;
 
         if (isset($_POST['save_set'])) {
@@ -339,8 +354,8 @@ class rtbs_plugin {
     }
 
 
-    public function rtbs_admin_shortcodes() {
-
+    public function rtbs_admin_shortcodes()
+    {
         $tours = array();
         $error_msg = null;
 
@@ -390,7 +405,8 @@ class rtbs_plugin {
     }
 
 
-    public function rtbs_admin_css_style() {
+    public function rtbs_admin_css_style()
+    {
         $num_rows_updated = 0;
 
         if (isset($_POST['save_set'])) {
@@ -434,7 +450,8 @@ class rtbs_plugin {
     }
 
 
-    public function display_error($message) {
+    public function display_error($message)
+    {
         echo '<div style="background: color: yellow; border: 2px solid red; padding: 10px;"><h2>RTBS Booking Plugin Error</h2><span>' . htmlentities($message) . '</span></div>';
     }
 
@@ -452,7 +469,8 @@ class rtbs_plugin {
     /**
      * Render availability step on ajax request
      */
-    public function ajax_frontend_availability() {
+    public function ajax_frontend_availability()
+    {
         $date = (isset($_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
 
         // can't search in the past
@@ -469,7 +487,8 @@ class rtbs_plugin {
     }
 
 
-    private function render_plugin_frontend($atts) {
+    private function render_plugin_frontend($atts)
+    {
 
         // shortcode with attribute or parameter
         if (isset($atts['tour_key'])) {
@@ -494,6 +513,22 @@ class rtbs_plugin {
         if ($hdStep == self::STEP_PAYMENT) {
             $this->step_payment();
             return;
+        }
+
+        // min/max pax per booking
+        $min_pax_per_booking = 0;
+        $max_pax_per_booking = 999;
+
+        $hd_tour_key = isset($_POST['hd_tour_key']) ? $_POST['hd_tour_key'] : null;
+        if ($hd_tour_key) {
+            $booking_service = $this->get_booking_service_instance();
+            $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
+            $tour = $tours[0]; // only expecting 1 tour
+
+            if ($tour) {
+                $min_pax_per_booking = $tour->get_min_pax_per_booking();
+                $max_pax_per_booking = $tour->get_max_pax_per_booking();
+            }
         }
 
         ?>
@@ -532,6 +567,15 @@ class rtbs_plugin {
                     </div>
                 </div>
             </div>
+
+            <script type="text/javascript">
+                jQuery(document).ready(function() {
+                    RTBSplugin.init(<?= json_encode(array(
+                        'MinPaxPerBooking' => $min_pax_per_booking,
+                        'MaxPaxPerBooking' => $max_pax_per_booking,
+                    )); ?>);
+                });
+            </script>
 
         </div>
         <?php

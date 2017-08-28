@@ -6,6 +6,6 @@
         }
     },
     "require": {
-        "whytewaters/api-helper-library": "1.6.*"
+        "whytewaters/api-helper-library": "1.9.*"
     }
 }

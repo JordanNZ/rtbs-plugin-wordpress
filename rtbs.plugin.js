@@ -1,7 +1,8 @@
 var RTBSplugin = (function ($) {
 
-    var $selectPeople,
-        $div;
+    var opts;
+    var $selectPeople;
+    var $div;
 
     var isEmail = function(email) {
         var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
@@ -9,8 +10,8 @@ var RTBSplugin = (function ($) {
     };
 
     var actionSelectDate = function selectDate() {
-        var $date = $(this),
-            $content = $date.closest(".rtbs-container").find(".rtbs-tours-step");
+        var $date = $(this);
+        var $content = $date.closest(".rtbs-container").find(".rtbs-tours-step");
 
         $content.html('<div style="height: 60px; margin: 50px auto; font-weight: bold;"><img src="' + myRtbsObject.loaderImgUrl + '"></div>');
 
@@ -25,8 +26,8 @@ var RTBSplugin = (function ($) {
     };
 
     var actionPeopleChange = function() {
-        var totalAmount= 0.00,
-            totalPax = 0;
+        var totalAmount= 0.00;
+        var totalPax = 0;
 
         $selectPeople.each(function () {
             totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
@@ -46,9 +47,9 @@ var RTBSplugin = (function ($) {
     };
 
     actionSubmitForm = function() {
-        var totalPax = 0,
-            errors = [],
-            numRemaining = $('#hd-remaining').val();
+        var totalPax = 0;
+        var errors = [];
+        var numRemaining = $('#hd-remaining').val();
 
         $('select.nPeople').each(function () {
             totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
@@ -80,6 +81,10 @@ var RTBSplugin = (function ($) {
             errors.push("Only " + numRemaining + " places remaining");
         }
 
+        if (totalPax < opts.MinPaxPerBooking) {
+            errors.push("Minimum of  " + opts.MinPaxPerBooking + " places required per booking");
+        }
+
         if (errors.length) {
             $('.alert-danger').show().html(errors.join('<br>'));
             return false;
@@ -94,7 +99,6 @@ var RTBSplugin = (function ($) {
 
     var cacheElements = function() {
         $selectPeople = $('select.nPeople');
-        $datePicker = $();
     };
 
     var bindEvents = function() {
@@ -112,7 +116,12 @@ var RTBSplugin = (function ($) {
         });
     };
 
-    var init = function() {
+    var init = function(options) {
+        opts = options || {
+            MinPaxPerBooking: 0,
+            MaxPaxPerBooking: 999
+        };
+
         cacheElements();
         bindEvents();
         initDatePicker();
@@ -123,8 +132,3 @@ var RTBSplugin = (function ($) {
     };
 
 })(jQuery);
-
-
-jQuery(document).ready(function() {
-    RTBSplugin.init()
-});
