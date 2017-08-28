@@ -7,7 +7,7 @@ allow_url_fopen=1 is also required
 
 ### Release Log
 **28/08/2017: Version 4.2.0**
-- Honour min pax per booking setting in tours
+- Honour min/max pax per booking setting in tours
 
 **13/01/2017: Version 4.1.0**
 - When plugin loads, show first date with available sessions

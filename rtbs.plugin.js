@@ -85,6 +85,10 @@ var RTBSplugin = (function ($) {
             errors.push("Minimum of  " + opts.MinPaxPerBooking + " places required per booking");
         }
 
+        if (totalPax > opts.MaxPaxPerBooking) {
+            errors.push("Maximum of  " + opts.MaxPaxPerBooking + " places allowed per booking");
+        }
+
         if (errors.length) {
             $('.alert-danger').show().html(errors.join('<br>'));
             return false;
