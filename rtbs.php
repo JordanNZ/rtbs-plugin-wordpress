@@ -4,7 +4,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 4.0.0
+Version: 4.2.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -20,7 +20,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '4.2.1';
+    private $rtbslive_plugin_version = '4.2.0'; // need to update description in comments above, as that is where wp looks for info
     private $wpdb;
 
     private $booking_service_instance;
