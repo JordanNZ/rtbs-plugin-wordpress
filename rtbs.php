@@ -20,7 +20,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '4.2.0';
+    private $rtbslive_plugin_version = '4.2.1';
     private $wpdb;
 
     private $booking_service_instance;

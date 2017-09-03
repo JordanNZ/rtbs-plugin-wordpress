@@ -4,10 +4,12 @@ var RTBSplugin = (function ($) {
     var $selectPeople;
     var $div;
 
+
     var isEmail = function(email) {
         var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
         return regex.test(email);
     };
+
 
     var actionSelectDate = function selectDate() {
         var $date = $(this);
@@ -25,6 +27,7 @@ var RTBSplugin = (function ($) {
             });
     };
 
+
     var actionPeopleChange = function() {
         var totalAmount= 0.00;
         var totalPax = 0;
@@ -34,19 +37,34 @@ var RTBSplugin = (function ($) {
             totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
         });
 
-        var numRemaining = $('#hd-remaining').val(),
-            $htmlTotalPrice = $('#totalPrice');
+        var numRemaining = $('#hd-remaining').val();
+        var $htmlTotalPrice = $('#totalPrice');
+        var errMsg = "";
+        var plural = "";
 
-        if (totalPax > numRemaining) {
+
+        if (totalPax < opts.MinPaxPerBooking) {
+            plural = (opts.MinPaxPerBooking == 1) ? "place" : "places";
+            errMsg = "Minimum of  " + opts.MinPaxPerBooking + " " + plural + " required per booking";
+        } else if(totalPax > opts.MaxPaxPerBooking) {
+            plural = (opts.MaxPaxPerBooking == 1) ? "place" : "places";
+            errMsg = "Maximum of  " + opts.MaxPaxPerBooking + " " + plural + " allowed per booking";
+        } else if (totalPax > numRemaining) {
+            plural = (numRemaining == 1) ? "place" : "places";
+            errMsg = "Only " + numRemaining + " " + plural + " remaining";
+        }
+
+        if (errMsg) {
+            $htmlTotalPrice.html(errMsg);
             $htmlTotalPrice.css({color: 'red'});
-            $htmlTotalPrice.html("Only " + numRemaining + " places remaining");
         } else {
             $htmlTotalPrice.css({color: 'black'});
             $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
         }
     };
 
-    actionSubmitForm = function() {
+
+    var actionSubmitForm = function() {
         var totalPax = 0;
         var errors = [];
         var numRemaining = $('#hd-remaining').val();
@@ -97,13 +115,16 @@ var RTBSplugin = (function ($) {
         }
     };
 
+
     var actionTandcChecked = function() {
         $('#confirm_pay').prop('disabled', !$(this).is(':checked'));
     };
 
+
     var cacheElements = function() {
         $selectPeople = $('select.nPeople');
     };
+
 
     var bindEvents = function() {
         $div = $(".rtbs-plugin-content");
@@ -113,12 +134,14 @@ var RTBSplugin = (function ($) {
         $div.on('change', ".rtbs-plugin-datepicker", actionSelectDate);
     };
 
+
     var initDatePicker = function() {
         $(".rtbs-plugin-datepicker").datepicker({
             minDate: 0,
             dateFormat: 'yy-mm-dd'
         });
     };
+
 
     var init = function(options) {
         opts = options || {
@@ -130,6 +153,7 @@ var RTBSplugin = (function ($) {
         bindEvents();
         initDatePicker();
     };
+
 
     return {
         init: init
