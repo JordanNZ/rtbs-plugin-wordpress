@@ -1,10 +1,13 @@
 <?php
+
+use Rtbs\ApiHelper\Exceptions\PromoNotFoundException;
+
 require_once("vendor/autoload.php");
 
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 4.2.0
+Version: 4.3.0
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -20,7 +23,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '4.2.0'; // need to update description in comments above, as that is where wp looks for info
+    private $rtbslive_plugin_version = '4.3.0'; // need to update description in comments above, as that is where wp looks for info
     private $wpdb;
 
     private $booking_service_instance;
@@ -46,7 +49,9 @@ class rtbs_plugin {
 
         // ajax actions
         add_action('wp_ajax_rtbs_availability',  array($this, 'ajax_frontend_availability'));
-        add_action('wp_ajax_nopriv_rtbs_availability',  array($this, 'ajax_frontend_availability'));
+	    add_action('wp_ajax_nopriv_rtbs_availability',  array($this, 'ajax_frontend_availability'));
+	    add_action('wp_ajax_rtbs_applypromo',  array($this, 'ajax_frontend_applypromo'));
+	    add_action('wp_ajax_nopriv_rtbs_applypromo',  array($this, 'ajax_frontend_applypromo'));
 
         add_shortcode('rtbs_plugin', array($this, 'rtbs_plugin_main'));
         add_shortcode('rtbs_show_ticket', array($this, 'rtbs_show_ticket'));
@@ -69,7 +74,6 @@ class rtbs_plugin {
                 $this->settings->api_key = $row->api_key;
                 $this->settings->supplier_key = $row->supplier_key;
                 $this->settings->is_test_mode = ($row->rtbs_domain == self::HOST_TEST);
-                $this->settings->is_show_promocode = $row->is_show_promocode;
                 $this->settings->url_success = $row->success_url;
                 $this->settings->html_terms = $row->terms_cond;
                 $this->settings->tour_keys = $row->tour_keys;
@@ -269,15 +273,6 @@ class rtbs_plugin {
                             <input type="hidden" name="is_include_bootstrap" value="0">
                             <input name="is_include_bootstrap" type="checkbox" id="is_include_bootstrap" <?= ($this->settings->is_include_bootstrap) ? 'checked' : '' ?> class="regular-checkbox" value="1">
                             <p class="description">Only include bootstrap if your theme does not have bootstrap already</p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th scope="row"><label for="is_show_promocode">Show Promo Code</label></th>
-                        <td>
-                            <input type="hidden" name="is_show_promocode" value="0">
-                            <input name="is_show_promocode" type="checkbox" id="is_show_promocode" <?= ($this->settings->is_show_promocode) ? 'checked' : '' ?> class="regular-checkbox" value="1">
-                            <p class="description">Allow customer to use Promo Codes for bookings</p>
                         </td>
                     </tr>
 
@@ -487,7 +482,44 @@ class rtbs_plugin {
     }
 
 
-    private function render_plugin_frontend($atts)
+	/**
+	 * apply promo
+	 */
+	public function ajax_frontend_applypromo()
+	{
+        $booking = new Rtbs\ApiHelper\Models\Booking();
+        $booking->set_tour_key($_REQUEST['tour_key']);
+        $booking->set_datetime($_REQUEST['datetime']);
+
+        $price_qtys = $_REQUEST['price_qtys'];
+        foreach ($price_qtys as $price_qty) {
+	        $booking->add_price_selection_keys($price_qty['price_key'], $price_qty['qty']);
+        }
+
+        $booking_service = $this->get_booking_service_instance();
+
+		$promo = null;
+		$err_msg = null;
+
+        try {
+	        $promo = $booking_service->apply_promo( $_REQUEST['promo_code'], $booking );
+        } catch (PromoNotFoundException $ex) {
+            $err_msg = $ex->getMessage();
+        }
+
+        $data = [
+            'success' => ($promo) ? true : false,
+            'err_msg' => $err_msg,
+            'promo_code' => ($promo) ? $promo->get_promo_code() : null,
+            'discount_amount' => ($promo) ? $promo->get_discount_amount() : 0,
+        ];
+
+		wp_send_json($data);
+	}
+
+
+
+	private function render_plugin_frontend($atts)
     {
 
         // shortcode with attribute or parameter
@@ -588,7 +620,8 @@ class rtbs_plugin {
     }
 
 
-    private function step_confirm() {
+    private function step_confirm()
+    {
         $price_rates = $_POST['price_rate'];
         $price_names = $_POST['hd_price_name'];
 	    $fields = array_key_exists('fields', $_POST) ? $_POST['fields'] : array();
@@ -603,6 +636,11 @@ class rtbs_plugin {
                 $total += ($qty * $price_rates[$idx]);
             }
         }
+
+        $tours = $this->get_tours(array($_POST['hd_tour_key']));
+
+	    // only expecting 1 tour
+	    $tour = $tours[0];
 
         ?>
             <h3 class="tour_name"><?= htmlentities($_POST['hd_tour_name']); ?></h3>
@@ -624,17 +662,33 @@ class rtbs_plugin {
                     <?php foreach ($price_qtys as $idx => $qty): ?>
                         <tr>
                             <td><?= htmlentities($price_names[$idx] . ' x ' . $qty); ?></td>
-                            <td><?= '$' . number_format($price_rates[$idx] * $qty, 2); ?></td>
+                            <td><span class="rtbs-plugin-price-amount" data-amount="<?php printf('%0.2f', $price_rates[$idx] * $qty); ?>"><?= '$' . number_format($price_rates[$idx] * $qty, 2); ?></span></td>
                         </tr>
                     <?php endforeach; ?>
 
+                    <?php if ($tour->get_has_promo_codes()): ?>
+                        <tr class="rtbs-plugin-promo-code-row">
+                            <td>
+                                Promo Code:
+                            </td>
+                            <td>
+                                <div class=form-group">
+                                    <div class="input-group">
+                                        <input class="rtbs-plugin-promo-code form-control" type="text" name="" value="" placeholder="Promo Code">
+                                        <a href="#" class="btn btn-default input-group-addon action-apply-promo">Apply</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="rtbs-plugin-promo-discount-row" style="display: none;">
+                            <td>less Discount <span class="rtbs-plugin-promo-code-readonly"></span> </td>
+                            <td><span class="rtbs-plugin-promo-discount-amount"></span></td>
+                        </tr>
+                    <?php endif; ?>
+
                     <tr>
-                        <td>
-                            Total Price:
-                        </td>
-                        <td>
-                            <?= '$' . number_format($total, 2); ?>
-                        </td>
+                        <td>Total Price:</td>
+                        <td><span class="rtbs-plugin-total-amount"><?= '$' . number_format($total, 2); ?></span></td>
                     </tr>
 
                     <tr>
@@ -682,9 +736,9 @@ class rtbs_plugin {
 
                     <tr>
                         <td colspan="2">
+                            <div class="rtbs-plugin-tandc-error" style="display: none;">Please accept the terms and conditions</div>
                             <p class="tandc"><?= nl2br($this->settings->html_terms); ?></p>
-                            <input type="checkbox" name="tandc" id="rtbs-checkbox-tandc" value="0"> I have read and accept the
-                            Terms and Conditions.<br/><br/>
+                            <input type="checkbox" name="tandc" id="rtbs-checkbox-tandc" value="0"> I have read and accept the Terms and Conditions.<br><br>
                         </td>
                     </tr>
 
@@ -692,13 +746,14 @@ class rtbs_plugin {
 
                 <div class="hidden_hd">
                     <input type="hidden" name="hd_step" value="4">
-                    <input type="hidden" name="hd_tour_key" value="<?= htmlentities($_POST['hd_tour_key']); ?>">
+                    <input type="hidden" id="rtbs-plugin-hd-promo-code" name="hd_promo_code" value="">
+                    <input type="hidden" class="rtbs-plugin-tour-key" name="hd_tour_key" value="<?= htmlentities($_POST['hd_tour_key']); ?>">
                     <input type="hidden" name="hd_date" value="<?= htmlentities($_POST['hd_date']); ?>">
                     <input type="hidden" name="hd_tour_name" value="<?= htmlentities($_POST['hd_tour_name']); ?>">
-                    <input type="hidden" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
+                    <input type="hidden" class="rtbs-plugin-trip-datetime" name="hd_tour_date_time" value="<?= htmlentities($_POST['hd_tour_date_time']); ?>">
 
                     <?php foreach ($price_qtys as $idx => $qty): ?>
-                        <input type="hidden" name="price_qty[<?= $idx; ?>]" value="<?= $qty; ?>">
+                        <input type="hidden" class="rtbs-plugin-price-qty" data-price-key="<?= $idx; ?>" name="price_qty[<?= $idx; ?>]" value="<?= $qty; ?>">
                     <?php endforeach; ?>
 
 	                <?php foreach ($fields as $name => $value): ?>
@@ -710,9 +765,7 @@ class rtbs_plugin {
 
                 </div>
 
-                <button id="confirm_pay" disabled type="submit" class="btn btn-primary pull-right"
-                        name="confirm_payment">Confirm &amp; Make Payment
-                </button>
+                <button id="confirm_pay" type="submit" class="btn btn-primary pull-right" name="confirm_payment">Confirm &amp; Make Payment</button>
 
             </form>
 
@@ -814,15 +867,6 @@ class rtbs_plugin {
                                 </div>
                             </div>
 
-
-                            <?php if ($this->settings->is_show_promocode): ?>
-                                <div class="form-group">
-                                    <label for="rtbsPromo" class="col-lg-3">Promo Code</label>
-                                    <div class="col-lg-9">
-                                        <input id="rtbsPromo" class="form-control" type="text" name="promo" value="">
-                                    </div>
-                                </div>
-                            <?php endif; ?>
 
                             <?php if (count($pickups) > 0 || count($tour->get_fields()) > 0 || $this->settings->is_show_comments): ?>
                                 <p class="rtbs-plugin-section-header">Additional Info </p>
@@ -1002,7 +1046,8 @@ class rtbs_plugin {
     }
 
 
-    private function step_payment() {
+    private function step_payment()
+    {
 
         $booking = new Rtbs\ApiHelper\Models\Booking();
         $booking->set_tour_key($_POST['hd_tour_key']);
@@ -1012,9 +1057,8 @@ class rtbs_plugin {
         $booking->set_email($_POST['email']);
         $booking->set_phone($_POST['phone']);
 
-        // TODO call promo api
-        if (!empty($_POST['promo'])) {
-            $booking->set_promo_key($_POST['promo']);
+        if (!empty($_POST['hd_promo_code'])) {
+            $booking->set_promo_code($_POST['hd_promo_code']);
         }
 
         if (!empty($this->settings->url_success)) {

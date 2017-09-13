@@ -1,4 +1,5 @@
 var RTBSplugin = (function ($) {
+    "use strict";
 
     var opts;
     var $selectPeople;
@@ -33,12 +34,12 @@ var RTBSplugin = (function ($) {
         var totalPax = 0;
 
         $selectPeople.each(function () {
-            totalAmount += parseFloat($(this).data('rate')) * parseInt($(this).val(), 10);
-            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
+            totalAmount += parseFloat($(this).data("rate")) * parseInt($(this).val(), 10);
+            totalPax += parseInt($(this).data("pax"), 10) * parseInt($(this).val(), 10);
         });
 
-        var numRemaining = $('#hd-remaining').val();
-        var $htmlTotalPrice = $('#totalPrice');
+        var numRemaining = $("#hd-remaining").val();
+        var $htmlTotalPrice = $("#totalPrice");
         var errMsg = "";
         var plural = "";
 
@@ -56,10 +57,10 @@ var RTBSplugin = (function ($) {
 
         if (errMsg) {
             $htmlTotalPrice.html(errMsg);
-            $htmlTotalPrice.css({color: 'red'});
+            $htmlTotalPrice.css({color: "red"});
         } else {
-            $htmlTotalPrice.css({color: 'black'});
-            $htmlTotalPrice.html('Total: $' + totalAmount.toFixed(2));
+            $htmlTotalPrice.css({color: "black"});
+            $htmlTotalPrice.html("Total: $" + totalAmount.toFixed(2));
         }
     };
 
@@ -67,28 +68,28 @@ var RTBSplugin = (function ($) {
     var actionSubmitForm = function() {
         var totalPax = 0;
         var errors = [];
-        var numRemaining = $('#hd-remaining').val();
+        var numRemaining = $("#hd-remaining").val();
 
-        $('select.nPeople').each(function () {
-            totalPax += parseInt($(this).data('pax'), 10) * parseInt($(this).val(), 10);
+        $("select.nPeople").each(function () {
+            totalPax += parseInt($(this).data("pax"), 10) * parseInt($(this).val(), 10);
         });
 
-        if (!$('#rtbsFname').val()) {
-            errors.push('First Name is required');
+        if (!$("#rtbsFname").val()) {
+            errors.push("First Name is required");
         }
 
-        if (!$('#rtbsLname').val()) {
-            errors.push('Last Name is required');
+        if (!$("#rtbsLname").val()) {
+            errors.push("Last Name is required");
         }
 
-        if (!$('#rtbsEmail').val()) {
-            errors.push('Email is required');
-        } else if (!isEmail($('#rtbsEmail').val())) {
-            errors.push('Email is not valid');
+        if (!$("#rtbsEmail").val()) {
+            errors.push("Email is required");
+        } else if (!isEmail($("#rtbsEmail").val())) {
+            errors.push("Email is not valid");
         }
 
-        if (!$('#rtbsPhone').val()) {
-            errors.push('Phone is required');
+        if (!$("#rtbsPhone").val()) {
+            errors.push("Phone is required");
         }
 
         if (totalPax == 0) {
@@ -108,7 +109,7 @@ var RTBSplugin = (function ($) {
         }
 
         if (errors.length) {
-            $('.alert-danger').show().html(errors.join('<br>'));
+            $(".alert-danger").show().html(errors.join("<br>"));
             return false;
         } else {
             return true;
@@ -116,29 +117,89 @@ var RTBSplugin = (function ($) {
     };
 
 
-    var actionTandcChecked = function() {
-        $('#confirm_pay').prop('disabled', !$(this).is(':checked'));
+    var actionApplyPromo = function(evt)
+    {
+        evt.preventDefault();
+
+        var $inpPromoCode = $(".rtbs-plugin-promo-code");
+
+        if (!$inpPromoCode.val()) {
+            alert("Invalid Promo Code");
+            return;
+        }
+
+        var priceQtys = [];
+
+        $(".rtbs-plugin-price-qty").each(function () {
+            var $priceQty = $(this);
+            priceQtys.push({
+                price_key: $priceQty.data("price-key"),
+                qty: $priceQty.val()
+            });
+        });
+
+        $.post(myRtbsObject.ajaxUrl, {
+                action: "rtbs_applypromo",
+                datetime: $(".rtbs-plugin-trip-datetime").val(),
+                tour_key: $(".rtbs-plugin-tour-key").val(),
+                promo_code: $inpPromoCode.val(),
+                price_qtys: priceQtys
+            })
+            .done(function (res) {
+                if (res.success) {
+                    var discountAmount = parseFloat(res.discount_amount);
+
+                    var totalAmount = 0;
+                    $(".rtbs-plugin-price-amount").each(function () {
+                        totalAmount += parseFloat($(this).data("amount"));
+                    });
+
+                    totalAmount -= discountAmount;
+
+                    $(".rtbs-plugin-promo-code-readonly").text("(" + $inpPromoCode.val()  + ")");
+                    $("#rtbs-plugin-hd-promo-code").val($inpPromoCode.val());
+                    $(".rtbs-plugin-promo-discount-amount").text("-$" + discountAmount.toFixed(2));
+                    $(".rtbs-plugin-total-amount").text("$" + totalAmount.toFixed(2));
+                    $(".rtbs-plugin-promo-code-row").hide();
+                    $(".rtbs-plugin-promo-discount-row").show();
+                } else {
+                    alert(res.err_msg);
+                    $inpPromoCode.val("").focus();
+                }
+            })
+            .fail(function (res) {
+                alert("oh well error occurred, try again");
+            });
+
     };
 
 
-    var cacheElements = function() {
-        $selectPeople = $('select.nPeople');
+    var actionConfirmAndMakePayment = function (evt) {
+        if (!$("#rtbs-checkbox-tandc").is(":checked")) {
+            evt.preventDefault();
+            $(".rtbs-plugin-tandc-error").show();
+        }
     };
 
 
     var bindEvents = function() {
         $div = $(".rtbs-plugin-content");
-        $selectPeople.on('change', actionPeopleChange);
-        $('#details-form').on('submit', actionSubmitForm);
-        $('#rtbs-checkbox-tandc').on('change', actionTandcChecked);
-        $div.on('change', ".rtbs-plugin-datepicker", actionSelectDate);
+        $selectPeople.on("change", actionPeopleChange);
+        $("#details-form").on("submit", actionSubmitForm);
+        $("#confirm_pay").on("click", actionConfirmAndMakePayment);
+        $div.on("change", ".rtbs-plugin-datepicker", actionSelectDate);
+        $(".action-apply-promo").on("click", actionApplyPromo);
     };
 
+
+    var cacheElements = function() {
+        $selectPeople = $("select.nPeople");
+    };
 
     var initDatePicker = function() {
         $(".rtbs-plugin-datepicker").datepicker({
             minDate: 0,
-            dateFormat: 'yy-mm-dd'
+            dateFormat: "yy-mm-dd"
         });
     };
 

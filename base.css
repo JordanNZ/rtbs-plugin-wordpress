@@ -82,3 +82,12 @@
     padding: 10px 5px 10px 5px;
     color: black;
 }
+
+.rtbs-plugin-promo-code {
+    width: 150px;
+    display: inline;
+}
+
+.rtbs-plugin-tandc-error {
+    color: red;
+}
