@@ -6,6 +6,10 @@ This means no short array syntax
 allow_url_fopen=1 is also required
 
 ### Release Log
+**21/09/2017: Version 4.3.1**
+- Add support for redemption of promo codes
+- Tweaks to min/max pax per booking validation
+
 **28/08/2017: Version 4.2.0**
 - Honour min/max pax per booking setting in tours
 
