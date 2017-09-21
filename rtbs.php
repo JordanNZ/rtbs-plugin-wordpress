@@ -7,7 +7,7 @@ require_once("vendor/autoload.php");
 /*
 Plugin Name: RTBS Booking Plugin
 Description: Tour Booking Plugin
-Version: 4.3.0
+Version: 4.3.1
 */
 global $wpdb;
 new rtbs_plugin($wpdb);
@@ -23,7 +23,7 @@ class rtbs_plugin {
     const STEP_CONFIRM = 3;
     const STEP_PAYMENT = 4;
 
-    private $rtbslive_plugin_version = '4.3.0'; // need to update description in comments above, as that is where wp looks for info
+    private $rtbslive_plugin_version = '4.3.1'; // need to update description in comments above, as that is where wp looks for info
     private $wpdb;
 
     private $booking_service_instance;
@@ -547,20 +547,10 @@ class rtbs_plugin {
             return;
         }
 
-        // min/max pax per booking
-        $min_pax_per_booking = 0;
-        $max_pax_per_booking = 999;
-
         $hd_tour_key = isset($_POST['hd_tour_key']) ? $_POST['hd_tour_key'] : null;
         if ($hd_tour_key) {
             $booking_service = $this->get_booking_service_instance();
             $tours = $booking_service->get_tours(array($_POST['hd_tour_key']));
-            $tour = $tours[0]; // only expecting 1 tour
-
-            if ($tour) {
-                $min_pax_per_booking = $tour->get_min_pax_per_booking();
-                $max_pax_per_booking = $tour->get_max_pax_per_booking();
-            }
         }
 
         ?>
@@ -602,10 +592,7 @@ class rtbs_plugin {
 
             <script type="text/javascript">
                 jQuery(document).ready(function() {
-                    RTBSplugin.init(<?= json_encode(array(
-                        'MinPaxPerBooking' => $min_pax_per_booking,
-                        'MaxPaxPerBooking' => $max_pax_per_booking,
-                    )); ?>);
+                    RTBSplugin.init();
                 });
             </script>
 
@@ -788,9 +775,14 @@ class rtbs_plugin {
 
 	    $prices = array();
 
+	    $min_pax = 0;
+	    $max_pax = 999;
+
 	    foreach ($sessions_and_advance_dates->get_sessions() as $session) {
 		    if ($session->get_datetime() == $_POST['hd_tour_date_time'] && $session->get_tour_key() == $_POST['hd_tour_key']) {
 			    $prices = $session->get_prices();
+                $min_pax = $session->get_min_pax();
+                $max_pax = $session->get_max_pax();
 			    break;
 		    }
 	    }
@@ -806,7 +798,7 @@ class rtbs_plugin {
 
                 <center>
 
-                    <form class="form-horizontal" action="#rtbs-booking" method="post" id="details-form">
+                    <form class="form-horizontal" action="#rtbs-booking" method="post" id="details-form" data-min-pax="<?= $min_pax; ?>" data-max-pax="<?= $max_pax; ?>">
                         <fieldset>
                             <p class="rtbs-plugin-section-header"><?php echo(!empty($section_titles[0]) ? $section_titles[0] : 'Number of People'); ?> </p>
                             <?php foreach ($prices as $price): ?>
@@ -1021,17 +1013,12 @@ class rtbs_plugin {
                                     <p>
                                         <?= date('g:ia', strtotime($session->get_datetime())) . ($this->settings->is_show_remaining ? ', ' . $session->get_remaining() . ' remaining' : ''); ?>
                                         <input type="hidden" name="hd_step" value="2">
-                                        <input type="hidden" name="hd_remaining"
-                                               value="<?= $session->get_remaining(); ?>"/>
-                                        <input type="hidden" name="hd_tour_key"
-                                               value="<?= $tour->get_tour_key(); ?>">
+                                        <input type="hidden" name="hd_remaining" value="<?= $session->get_remaining(); ?>">
+                                        <input type="hidden" name="hd_tour_key" value="<?= $tour->get_tour_key(); ?>">
                                         <input type="hidden" name="hd_date" value="<?= $date; ?>">
                                         <input type="hidden" name="hd_tour_name" value="<?= $tour->get_name(); ?>">
-                                        <input type="hidden" name="hd_tour_date_time"
-                                               value="<?= $session->get_datetime(); ?>">
-                                        <button <?= ($session->is_open()) ? '' : 'disabled' ?>
-                                                class="btn btn-primary" type="submit"
-                                                name="button"><?= $session->get_state(); ?></button>
+                                        <input type="hidden" name="hd_tour_date_time" value="<?= $session->get_datetime(); ?>">
+                                        <button <?= ($session->is_open()) ? '' : 'disabled' ?> class="btn btn-primary" type="submit" name="button"><?= $session->get_state(); ?></button>
                                     </p>
                                 </form>
                             <?php endforeach; ?>

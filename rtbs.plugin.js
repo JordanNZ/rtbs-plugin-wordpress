@@ -44,12 +44,12 @@ var RTBSplugin = (function ($) {
         var plural = "";
 
 
-        if (totalPax < opts.MinPaxPerBooking) {
-            plural = (opts.MinPaxPerBooking == 1) ? "place" : "places";
-            errMsg = "Minimum of  " + opts.MinPaxPerBooking + " " + plural + " required per booking";
-        } else if(totalPax > opts.MaxPaxPerBooking) {
-            plural = (opts.MaxPaxPerBooking == 1) ? "place" : "places";
-            errMsg = "Maximum of  " + opts.MaxPaxPerBooking + " " + plural + " allowed per booking";
+        if (totalPax < opts.MinPax) {
+            plural = (opts.MinPax == 1) ? "place" : "places";
+            errMsg = "Minimum of  " + opts.MinPax + " " + plural + " required per booking";
+        } else if(totalPax > opts.MaxPax) {
+            plural = (opts.MaxPax == 1) ? "place" : "places";
+            errMsg = "Maximum of  " + opts.MaxPax + " " + plural + " allowed per booking";
         } else if (totalPax > numRemaining) {
             plural = (numRemaining == 1) ? "place" : "places";
             errMsg = "Only " + numRemaining + " " + plural + " remaining";
@@ -100,12 +100,12 @@ var RTBSplugin = (function ($) {
             errors.push("Only " + numRemaining + " places remaining");
         }
 
-        if (totalPax < opts.MinPaxPerBooking) {
-            errors.push("Minimum of  " + opts.MinPaxPerBooking + " places required per booking");
+        if (totalPax < opts.MinPax) {
+            errors.push("Minimum of  " + opts.MinPax + " places required per booking");
         }
 
-        if (totalPax > opts.MaxPaxPerBooking) {
-            errors.push("Maximum of  " + opts.MaxPaxPerBooking + " places allowed per booking");
+        if (totalPax > opts.MaxPax) {
+            errors.push("Maximum of  " + opts.MaxPax + " places allowed per booking");
         }
 
         if (errors.length) {
@@ -206,9 +206,12 @@ var RTBSplugin = (function ($) {
 
     var init = function(options) {
         opts = options || {
-            MinPaxPerBooking: 0,
-            MaxPaxPerBooking: 999
+            MinPax: 0,
+            MaxPax: 999
         };
+
+        opts.MinPax = $("#details-form").data("min-pax");
+        opts.MaxPax = $("#details-form").data("max-pax");
 
         cacheElements();
         bindEvents();
